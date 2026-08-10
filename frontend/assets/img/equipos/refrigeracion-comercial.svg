@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" font-family="Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E0F2FE"/><stop offset="1" stop-color="#F0F9FF"/>
+    </linearGradient>
+    <linearGradient id="case" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/><stop offset="1" stop-color="#E2E8F0"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#BAE6FD" stop-opacity="0.7"/><stop offset="1" stop-color="#7DD3FC" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="560" fill="url(#sky)"/>
+  <rect y="420" width="800" height="140" fill="#E0F2FE" opacity="0.7"/>
+
+  <!-- back wall of store -->
+  <rect x="60" y="120" width="680" height="300" rx="10" fill="#ffffff" opacity="0.75"/>
+
+  <!-- refrigerated display case -->
+  <g>
+    <rect x="120" y="170" width="560" height="260" rx="18" fill="url(#case)" stroke="#CBD5E1" stroke-width="2"/>
+    <rect x="120" y="170" width="560" height="30" rx="18" fill="#0284C7"/>
+    <rect x="120" y="188" width="560" height="12" fill="#0284C7"/>
+    <text x="400" y="191" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">VITRINA REFRIGERADA · COMMERCIAL</text>
+
+    <!-- glass with products -->
+    <rect x="140" y="215" width="520" height="130" rx="8" fill="url(#glass)" stroke="#0EA5E9" stroke-width="2"/>
+    <g>
+      <rect x="165" y="270" width="56" height="75" rx="8" fill="#0EA5E9" opacity="0.9"/>
+      <rect x="235" y="260" width="56" height="85" rx="8" fill="#06B6D4" opacity="0.9"/>
+      <rect x="305" y="280" width="56" height="65" rx="8" fill="#38BDF8" opacity="0.95"/>
+      <rect x="375" y="255" width="56" height="90" rx="8" fill="#0EA5E9" opacity="0.85"/>
+      <rect x="445" y="270" width="56" height="75" rx="8" fill="#06B6D4" opacity="0.9"/>
+      <rect x="515" y="262" width="56" height="83" rx="8" fill="#38BDF8" opacity="0.85"/>
+    </g>
+    <line x1="140" y1="345" x2="660" y2="345" stroke="#0EA5E9" stroke-width="2" opacity="0.6"/>
+
+    <!-- shelves base -->
+    <rect x="140" y="355" width="520" height="20" rx="6" fill="#E2E8F0"/>
+    <g fill="#94A3B8">
+      <rect x="160" y="375" width="12" height="40" rx="4"/><rect x="200" y="375" width="12" height="40" rx="4"/>
+      <rect x="240" y="375" width="12" height="40" rx="4"/><rect x="280" y="375" width="12" height="40" rx="4"/>
+      <rect x="320" y="375" width="12" height="40" rx="4"/><rect x="360" y="375" width="12" height="40" rx="4"/>
+      <rect x="400" y="375" width="12" height="40" rx="4"/><rect x="440" y="375" width="12" height="40" rx="4"/>
+      <rect x="480" y="375" width="12" height="40" rx="4"/><rect x="520" y="375" width="12" height="40" rx="4"/>
+      <rect x="560" y="375" width="12" height="40" rx="4"/><rect x="600" y="375" width="12" height="40" rx="4"/>
+    </g>
+    <rect x="120" y="415" width="560" height="15" rx="7" fill="#0284C7"/>
+  </g>
+
+  <!-- price tags -->
+  <g font-size="11" fill="#0F172A">
+    <text x="175" y="252">$8.9</text><text x="245" y="242">$12.4</text><text x="315" y="262">$6.5</text>
+    <text x="385" y="237">$15.0</text><text x="455" y="252">$9.2</text><text x="525" y="244">$10.8</text>
+  </g>
+
+  <!-- badge -->
+  <g transform="translate(640,60)">
+    <circle cx="46" cy="46" r="46" fill="#0284C7"/>
+    <text x="46" y="50" text-anchor="middle" fill="#fff" font-size="22" font-weight="700">4°C</text>
+    <text x="46" y="70" text-anchor="middle" fill="#E0F2FE" font-size="11">CONSERVACIÓN</text>
+  </g>
+
+  <g transform="translate(60,80)" stroke="#0284C7" stroke-width="4" stroke-linecap="round">
+    <line x1="30" y1="0" x2="30" y2="60"/><line x1="0" y1="30" x2="60" y2="30"/>
+    <line x1="9" y1="9" x2="51" y2="51"/><line x1="51" y1="9" x2="9" y2="51"/>
+    <path d="M30 0 l-5 6 M30 0 l5 6 M30 60 l-5 -6 M30 60 l5 -6 M0 30 l6 -5 M0 30 l6 5 M60 30 l-6 -5 M60 30 l-6 5" stroke-width="3"/>
+  </g>
+</svg>

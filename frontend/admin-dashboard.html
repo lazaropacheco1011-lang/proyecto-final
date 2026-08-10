@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración | RefriMaster</title>
+  <meta name="description" content="Panel de administración de RefriMaster: clientes, técnicos, equipos, solicitudes, instalaciones, pagos, inventario y reportes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#F0F9FF', 100: '#E0F2FE', 200: '#BAE6FD', 300: '#7DD3FC',
+              400: '#38BDF8', 500: '#0EA5E9', 600: '#0284C7', 700: '#0369A1',
+              800: '#075985', 900: '#0C4A6E', 950: '#082F49'
+            },
+            primary: '#0284C7',
+            'primary-hover': '#0EA5E9',
+            'primary-container': '#E0F2FE',
+            'on-primary': '#ffffff',
+            'on-primary-container': '#075985',
+            secondary: '#06B6D4',
+            'secondary-container': '#CFFAFE',
+            'on-secondary': '#ffffff',
+            'on-secondary-container': '#075985',
+            success: '#22C55E',
+            error: '#DC2626',
+            warning: '#F59E0B',
+            'on-surface': '#0F172A',
+            'on-surface-variant': '#475569',
+            surface: '#ffffff',
+            'surface-variant': '#E0F2FE',
+            'surface-dim': '#F1F5F9',
+            'surface-container-low': '#F8FAFC',
+            'surface-container': '#F0F9FF',
+            'surface-container-high': '#E0F2FE',
+            background: '#F1F5F9',
+            'inverse-surface': '#0F172A',
+            'on-inverse-surface': '#ffffff',
+            'outline-variant': '#E2E8F0',
+            outline: '#CBD5E1'
+          },
+          borderRadius: {
+            DEFAULT: '0.25rem',
+            lg: '0.5rem',
+            xl: '0.75rem',
+            full: '9999px'
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif']
+          },
+          boxShadow: {
+            card: '0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.1)'
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230284C7'/%3E%3Cpath d='M16 6c1 4 .5 8-1.5 10.5L16 27l1.5-10.5C15.5 14 15 10 16 6z' fill='white'/%3E%3Ccircle cx='16' cy='14.5' r='1.8' fill='%230284C7'/%3E%3C/svg%3E">
+</head>
+<body class="bg-background font-sans text-on-surface antialiased">
+
+  <!-- Pantalla de carga -->
+  <div id="bootScreen" class="flex min-h-screen flex-col items-center justify-center gap-4 bg-surface-container">
+    <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-secondary shadow-card">
+      <span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+    </span>
+    <span class="font-semibold tracking-tight text-on-surface">Refri<span class="text-primary">Master</span></span>
+    <span class="text-sm text-on-surface-variant">Cargando panel de administración…</span>
+  </div>
+
+  <!-- Pantalla sin acceso -->
+  <div id="deniedScreen" class="hidden min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
+    <span class="material-symbols-outlined text-5xl text-error" style="font-variation-settings: 'FILL' 1;">lock</span>
+    <h1 class="text-2xl font-bold tracking-tight text-on-surface">Acceso restringido</h1>
+    <p class="max-w-md text-sm text-on-surface-variant">Este panel es para el personal interno de RefriMaster. Tu cuenta no tiene permisos para ver esta sección.</p>
+    <a href="/" class="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-hover">Volver al sitio</a>
+  </div>
+
+  <!-- Aplicación -->
+  <div id="app" class="hidden min-h-screen">
+    <!-- Overlay para el menú móvil -->
+    <div id="sidebarOverlay" class="fixed inset-0 z-30 hidden bg-on-surface/40 backdrop-blur-sm lg:hidden"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-outline-variant bg-white transition-transform duration-200 lg:translate-x-0">
+      <div class="flex h-16 items-center gap-3 border-b border-outline-variant px-5">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-sm">
+          <span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+        </span>
+        <div class="leading-tight">
+          <span class="block font-bold tracking-tight text-on-surface">Refri<span class="text-primary">Master</span></span>
+          <span class="block text-xs text-on-surface-variant">Panel de administración</span>
+        </div>
+        <button id="sidebarClose" class="ml-auto rounded-lg p-1 text-on-surface-variant hover:bg-surface-dim lg:hidden" aria-label="Cerrar menú">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <nav id="navList" class="flex-1 space-y-1 overflow-y-auto px-3 py-4"></nav>
+
+      <div class="border-t border-outline-variant p-4">
+        <button id="userCard" class="flex w-full items-center gap-3 rounded-lg text-left transition-colors hover:bg-surface-dim" title="Ver mi perfil">
+          <span id="userAvatar" class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container font-bold text-primary">?</span>
+          <span class="min-w-0 leading-tight">
+            <span id="userName" class="block truncate text-sm font-semibold text-on-surface">—</span>
+            <span id="userRole" class="block truncate text-xs text-on-surface-variant">—</span>
+          </span>
+        </button>
+        <div class="mt-3 flex gap-2">
+          <a href="/" class="flex-1 rounded-lg border border-outline-variant px-3 py-2 text-center text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-dim">Ver sitio</a>
+          <button id="logoutBtn" class="flex-1 rounded-lg bg-error px-3 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90">Cerrar sesión</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CONTENIDO -->
+    <div class="flex min-h-screen flex-col lg:pl-64">
+      <header class="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-outline-variant bg-white/90 px-4 backdrop-blur-md lg:px-8">
+        <button id="menuBtn" class="rounded-lg border border-outline-variant p-2 text-on-surface-variant lg:hidden" aria-label="Abrir menú">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+        <div class="min-w-0">
+          <h1 id="pageTitle" class="truncate text-lg font-bold tracking-tight text-on-surface">Dashboard</h1>
+          <p id="pageSubtitle" class="hidden truncate text-xs text-on-surface-variant sm:block">Resumen general del sistema</p>
+        </div>
+        <div class="ml-auto flex items-center gap-3">
+          <!-- Campana de notificaciones -->
+          <div id="notifWrap" class="relative">
+            <button id="notifBtn" class="relative flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-on-surface-variant transition-colors hover:bg-surface-dim" title="Notificaciones" aria-label="Notificaciones">
+              <span class="material-symbols-outlined text-base">notifications</span>
+              <span id="notifBadge" class="hidden absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 text-[10px] font-bold text-white"></span>
+            </button>
+            <div id="notifDropdown" class="notif-dropdown hidden">
+              <div class="flex items-center justify-between border-b border-outline-variant px-4 py-3">
+                <span class="text-sm font-bold text-on-surface">Notificaciones</span>
+                <button id="notifAllRead" class="text-xs font-semibold text-primary hover:underline">Marcar todas leídas</button>
+              </div>
+              <div id="notifList" class="notif-list"></div>
+            </div>
+          </div>
+          <button id="refreshBtn" class="flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-dim" title="Recargar datos">
+            <span class="material-symbols-outlined text-sm">refresh</span>
+            <span class="hidden sm:inline">Actualizar</span>
+          </button>
+        </div>
+      </header>
+
+      <main id="view" class="flex-1 p-4 lg:p-8"></main>
+
+      <footer class="border-t border-outline-variant bg-white px-4 py-4 text-center text-xs text-on-surface-variant lg:px-8">
+        © <span id="year"></span> RefriMaster · Plataforma de administración de instalaciones de refrigeración
+      </footer>
+    </div>
+  </div>
+
+  <!-- Contenedor de modales -->
+  <div id="modalRoot"></div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="/js/admin.js"></script>
+</body>
+</html>

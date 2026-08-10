@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RefriMaster | Administración Inteligente de Instalaciones de Refrigeración</title>
+  <meta name="description" content="RefriMaster: plataforma de administración inteligente de instalaciones de refrigeración industrial. Instalación, mantenimiento, reparación y monitoreo 4.0.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#F0F9FF', 100: '#E0F2FE', 200: '#BAE6FD', 300: '#7DD3FC',
+              400: '#38BDF8', 500: '#0EA5E9', 600: '#0284C7', 700: '#0369A1',
+              800: '#075985', 900: '#0C4A6E', 950: '#082F49'
+            },
+            primary: '#0284C7',
+            'primary-hover': '#0EA5E9',
+            'primary-container': '#E0F2FE',
+            'on-primary': '#ffffff',
+            'on-primary-container': '#075985',
+            secondary: '#06B6D4',
+            'secondary-container': '#CFFAFE',
+            'on-secondary': '#ffffff',
+            'on-secondary-container': '#075985',
+            success: '#22C55E',
+            error: '#DC2626',
+            'on-surface': '#0F172A',
+            'on-surface-variant': '#475569',
+            surface: '#ffffff',
+            'surface-variant': '#E0F2FE',
+            'surface-dim': '#F1F5F9',
+            'surface-container-low': '#F8FAFC',
+            'surface-container': '#F0F9FF',
+            'surface-container-high': '#E0F2FE',
+            'surface-container-highest': '#E0F2FE',
+            background: '#F8FAFC',
+            'inverse-surface': '#0F172A',
+            'on-inverse-surface': '#ffffff',
+            'outline-variant': '#E2E8F0',
+            outline: '#CBD5E1'
+          },
+          borderRadius: {
+            DEFAULT: '0.25rem',
+            lg: '0.5rem',
+            xl: '0.75rem',
+            full: '9999px'
+          },
+          spacing: {
+            unit: '4px',
+            xl: '40px',
+            lg: '24px',
+            xs: '4px',
+            gutter: '24px',
+            'container-max': '1440px',
+            md: '16px',
+            sm: '8px'
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            'headline-md': ['Inter'],
+            'body-lg': ['Inter'],
+            'headline-lg-mobile': ['Inter'],
+            'display-lg': ['Inter'],
+            'body-sm': ['Inter'],
+            'body-md': ['Inter'],
+            'label-md': ['Inter'],
+            'headline-lg': ['Inter']
+          },
+          fontSize: {
+            'headline-md': ['24px', { lineHeight: '32px', fontWeight: '600' }],
+            'body-lg': ['18px', { lineHeight: '28px', fontWeight: '400' }],
+            'headline-lg-mobile': ['24px', { lineHeight: '32px', fontWeight: '600' }],
+            'display-lg': ['48px', { lineHeight: '56px', letterSpacing: '-0.02em', fontWeight: '700' }],
+            'body-sm': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+            'body-md': ['16px', { lineHeight: '24px', fontWeight: '400' }],
+            'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.05em', fontWeight: '600' }],
+            'headline-lg': ['32px', { lineHeight: '40px', letterSpacing: '-0.01em', fontWeight: '600' }]
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230284C7'/%3E%3Cpath d='M16 6c1 4 .5 8-1.5 10.5L16 27l1.5-10.5C15.5 14 15 10 16 6z' fill='white'/%3E%3Ccircle cx='16' cy='14.5' r='1.8' fill='%230284C7'/%3E%3C/svg%3E">
+</head>
+<body class="bg-background font-body-md text-body-md text-on-surface antialiased selection:bg-primary selection:text-on-primary">
+
+  <!-- NAVBAR -->
+  <nav class="fixed top-0 z-50 w-full border-b border-outline-variant bg-white/90 backdrop-blur-md transition-all duration-300">
+    <div class="mx-auto flex h-16 max-w-container-max items-center justify-between px-lg">
+      <a href="#inicio" class="flex items-center gap-sm">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-sm">
+          <span class="material-symbols-outlined text-headline-md text-white" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+        </span>
+        <span class="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">Refri<span class="text-primary">Master</span></span>
+      </a>
+      <div class="hidden items-center gap-lg md:flex">
+        <a href="#inicio" class="border-b-2 border-primary py-1 font-body-md font-semibold text-primary">Inicio</a>
+        <a href="#servicios" class="font-body-md text-slate-700 transition-colors hover:text-primary">Características</a>
+        <a href="#catalogo" class="font-body-md text-slate-700 transition-colors hover:text-primary">Soluciones</a>
+        <a href="/productos/" class="font-body-md text-slate-700 transition-colors hover:text-primary">Almacén</a>
+        <a href="#proyectos" class="font-body-md text-slate-700 transition-colors hover:text-primary">Proyectos</a>
+        <a href="#contacto" class="font-body-md text-slate-700 transition-colors hover:text-primary">Contacto</a>
+      </div>
+      <div class="flex items-center gap-md">
+        <a href="/carrito/" class="relative rounded-lg p-2 text-slate-700 transition-colors hover:bg-surface-dim hover:text-primary" aria-label="Carrito de compras">
+          <span class="material-symbols-outlined">shopping_cart</span>
+          <span class="cart-badge absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-white hidden">0</span>
+        </a>
+        <div id="loginBtns" class="hidden items-center gap-md md:flex">
+          <button data-open="login" class="inline-flex items-center gap-2 rounded-xl border-2 border-primary/25 px-4 py-2 font-label-md font-bold text-primary transition-all hover:border-primary hover:bg-primary-container active:scale-95">
+            <span class="material-symbols-outlined text-base">login</span>
+            Iniciar Sesión
+          </button>
+        </div>
+        <div id="sessionArea" class="hidden items-center gap-md"></div>
+        <button id="menuBtn" class="rounded-lg border border-outline-variant p-2 text-slate-700 transition-colors hover:text-primary md:hidden" aria-label="Abrir menú">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+      </div>
+    </div>
+    <div id="mobileMenu" class="hidden border-t border-outline-variant bg-white px-lg py-md md:hidden">
+      <div class="flex flex-col gap-sm font-body-md text-slate-700">
+        <a href="#inicio" class="rounded-lg px-3 py-2 font-semibold text-primary transition-colors">Inicio</a>
+        <a href="#servicios" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Características</a>
+        <a href="#catalogo" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Soluciones</a>
+        <a href="/productos/" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Almacén</a>
+        <a href="#proyectos" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Proyectos</a>
+        <a href="#contacto" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Contacto</a>
+      </div>
+      <div class="mt-md flex gap-md border-t border-outline-variant pt-md">
+        <a href="/carrito/" class="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 font-body-md font-semibold text-on-surface">Carrito</a>
+        <button data-open="login" class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-primary/25 px-4 py-2.5 font-body-md font-bold text-primary transition-all hover:border-primary hover:bg-primary-container active:scale-95">
+          <span class="material-symbols-outlined">login</span>
+          Iniciar Sesión
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="pt-16">
+    <!-- ============ HERO ============ -->
+    <section id="inicio" class="relative overflow-hidden bg-surface-container">
+      <div class="pointer-events-none absolute inset-0">
+        <div class="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary-container opacity-80 blur-3xl"></div>
+        <div class="absolute right-0 top-1/4 h-80 w-80 rounded-full bg-secondary-container opacity-70 blur-3xl"></div>
+        <div class="absolute -bottom-28 left-1/3 h-80 w-80 rounded-full bg-primary-container opacity-60 blur-3xl"></div>
+        <div class="absolute left-10 top-16 h-40 w-40 rounded-3xl bg-primary/5 rotate-12"></div>
+      </div>
+      <div class="relative z-10 mx-auto grid w-full max-w-container-max items-center gap-12 px-lg py-16 md:grid-cols-2 md:py-24">
+        <div class="space-y-6">
+          <span class="inline-flex w-fit items-center gap-2 rounded-full bg-primary-container px-4 py-1.5 font-label-md font-bold text-on-primary-container ring-1 ring-inset ring-primary/20">
+            <span class="material-symbols-outlined text-sm">ac_unit</span>
+            REFRIGERACIÓN 4.0
+          </span>
+          <h1 class="font-headline-lg text-4xl font-extrabold leading-tight tracking-tight text-on-surface md:text-display-lg">
+            Administración Inteligente de Instalaciones de Refrigeración
+          </h1>
+          <p class="max-w-xl text-lg leading-relaxed text-on-surface-variant">
+            Gestiona clientes, técnicos, instalaciones, inventario y facturación desde una sola plataforma impulsada por precisión tecnológica.
+          </p>
+          <div class="flex flex-wrap gap-md pt-2">
+            <button data-open="login" class="inline-flex items-center gap-2 rounded-xl border-2 border-primary/25 px-xl py-md font-headline-md font-bold text-primary transition-all hover:border-primary hover:bg-primary-container active:scale-95">
+              <span class="material-symbols-outlined">login</span>
+              Iniciar Sesión
+            </button>
+          </div>
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-2 pt-2 text-sm text-on-surface-variant">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-success">check_circle</span>Monitoreo en tiempo real</span>
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-success">check_circle</span>Gestión de flota y técnicos</span>
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-success">check_circle</span>Soporte 24/7</span>
+          </div>
+        </div>
+        <div class="relative">
+          <div class="absolute -inset-5 rounded-[2rem] bg-gradient-to-tr from-primary/20 via-secondary/10 to-primary-container opacity-80 blur-2xl"></div>
+          <img src="/assets/img/equipos/principal.webp" alt="Refrigeración industrial RefriMaster" class="relative w-full rounded-3xl border border-white shadow-2xl shadow-slate-900/10 object-cover" width="1023" height="575" fetchpriority="high">
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CATÁLOGO DE EQUIPAMIENTO ============ -->
+    <section id="catalogo" class="bg-white py-20">
+      <div class="mx-auto max-w-container-max px-lg">
+        <div class="mb-12 flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <span class="font-label-md font-bold text-primary">SOLUCIONES</span>
+            <h2 class="mt-2 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">Catálogo de Equipamiento</h2>
+            <p class="mt-2 font-body-md text-on-surface-variant">Equipos de alta eficiencia para cada necesidad comercial e industrial.</p>
+          </div>
+        </div>
+        <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+          <!-- Aire Split -->
+          <article data-producto-link="6" class="group flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+            <div class="relative aspect-[4/3] overflow-hidden bg-surface-container">
+              <img src="/assets/img/equipos/aire-split.jpg" alt="Aire Acondicionado Split" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="800" height="560">
+              <span class="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-on-surface shadow-sm backdrop-blur">MÁS VENDIDO</span>
+            </div>
+            <div class="flex flex-1 flex-col p-6">
+              <h3 class="font-headline-md text-headline-md font-bold text-on-surface">Aire Acondicionado Split</h3>
+              <p class="mt-2 flex-1 text-sm leading-relaxed text-on-surface-variant">Unidades de pared inverter de alta eficiencia para oficinas y espacios comerciales.</p>
+              <button class="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">
+                Solicitud de compra
+              </button>
+            </div>
+          </article>
+          <!-- Aire Central -->
+          <article data-producto-link="8" class="group flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+            <div class="relative aspect-[4/3] overflow-hidden bg-surface-container">
+              <img src="/assets/img/equipos/aire-central.webp" alt="Aire Central" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="800" height="560">
+            </div>
+            <div class="flex flex-1 flex-col p-6">
+              <h3 class="font-headline-md text-headline-md font-bold text-on-surface">Aire Central</h3>
+              <p class="mt-2 flex-1 text-sm leading-relaxed text-on-surface-variant">Climatización centralizada por conductos para edificios corporativos y bodegas.</p>
+              <button class="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">
+                Solicitud de compra
+              </button>
+            </div>
+          </article>
+          <!-- Refrigeración Comercial -->
+          <article data-producto-link="14" class="group flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+            <div class="relative aspect-[4/3] overflow-hidden bg-surface-container">
+              <img src="/assets/img/equipos/refrigeracion-comercial.avif" alt="Refrigeración Comercial" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="800" height="560">
+            </div>
+            <div class="flex flex-1 flex-col p-6">
+              <h3 class="font-headline-md text-headline-md font-bold text-on-surface">Refrigeración Comercial</h3>
+              <p class="mt-2 flex-1 text-sm leading-relaxed text-on-surface-variant">Vitrinas y neveras para retail, supermercados y puntos de venta.</p>
+              <button class="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">
+                Solicitud de compra
+              </button>
+            </div>
+          </article>
+          <!-- Refrigeración Industrial -->
+          <article data-producto-link="12" class="group flex cursor-pointer flex-col overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">
+            <div class="relative aspect-[4/3] overflow-hidden bg-surface-container">
+              <img src="/assets/img/equipos/refrigeracion-industrial.jpg" alt="Refrigeración Industrial" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" width="800" height="560">
+            </div>
+            <div class="flex flex-1 flex-col p-6">
+              <h3 class="font-headline-md text-headline-md font-bold text-on-surface">Refrigeración Industrial</h3>
+              <p class="mt-2 flex-1 text-sm leading-relaxed text-on-surface-variant">Chillers y sistemas de gran capacidad para plantas y procesos productivos.</p>
+              <button class="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">
+                Solicitud de compra
+              </button>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ESTADÍSTICAS ============ -->
+    <section class="border-y border-outline-variant bg-surface-container-low">
+      <div class="mx-auto grid max-w-container-max grid-cols-2 gap-8 px-lg py-12 lg:grid-cols-4">
+        <div class="text-center">
+          <p class="font-label-md font-bold text-slate-500">Instalaciones</p>
+          <p class="mt-1 text-3xl font-extrabold tracking-tight text-on-surface md:text-4xl"><span id="statInstalaciones">1,280</span><span id="statInstalacionesSuf">+</span></p>
+          <p class="mt-1 flex items-center justify-center gap-1 text-sm font-semibold text-success"><span class="material-symbols-outlined text-sm">trending_up</span>+12% este mes</p>
+        </div>
+        <div class="text-center">
+          <p class="font-label-md font-bold text-slate-500">Clientes Activos</p>
+          <p class="mt-1 text-3xl font-extrabold tracking-tight text-on-surface md:text-4xl"><span id="statClientes">450</span></p>
+          <p class="mt-1 text-sm text-on-surface-variant">SaaS Corporativo</p>
+        </div>
+        <div class="text-center">
+          <p class="font-label-md font-bold text-slate-500">Técnicos Certificados</p>
+          <p class="mt-1 text-3xl font-extrabold tracking-tight text-on-surface md:text-4xl"><span id="statTecnicos">85</span></p>
+          <p class="mt-1 text-sm text-on-surface-variant">Disponibilidad 24/7</p>
+        </div>
+        <div class="text-center">
+          <p class="font-label-md font-bold text-slate-500">Proyectos Completados</p>
+          <p class="mt-1 text-3xl font-extrabold tracking-tight text-on-surface md:text-4xl"><span id="statProyectos">3.2k</span></p>
+          <p class="mt-1 flex items-center justify-center gap-1 text-sm font-semibold text-success"><span class="material-symbols-outlined text-sm">bolt</span>99.8% Eficiencia</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SERVICIOS / CARACTERÍSTICAS ============ -->
+    <section id="servicios" class="bg-surface-container py-20">
+      <div class="mx-auto max-w-container-max px-lg">
+        <div class="mb-12 text-center">
+          <span class="font-label-md font-bold text-primary">CARACTERÍSTICAS</span>
+          <h2 class="mt-2 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">Servicios Especializados</h2>
+          <p class="mx-auto mt-2 max-w-2xl font-body-md text-on-surface-variant">Soluciones integrales diseñadas para la cadena de frío más exigente.</p>
+        </div>
+        <div class="grid gap-6 md:grid-cols-4">
+          <a href="#catalogo" class="group block rounded-3xl border border-outline-variant bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-lg">
+            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-container text-on-primary-container transition-colors group-hover:bg-primary group-hover:text-white">
+              <span class="material-symbols-outlined">construction</span>
+            </div>
+            <h4 class="font-headline-md text-headline-md font-bold text-on-surface">Instalación</h4>
+            <p class="mt-2 text-sm leading-relaxed text-on-surface-variant">Montaje profesional de equipos de refrigeración industrial y comercial, con puesta en marcha y certificación.</p>
+          </a>
+          <a href="/mantenimiento/" class="group block rounded-3xl border border-outline-variant bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-secondary/40 hover:shadow-lg">
+            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-secondary-container text-on-secondary-container transition-colors group-hover:bg-secondary group-hover:text-white">
+              <span class="material-symbols-outlined">settings</span>
+            </div>
+            <h4 class="font-headline-md text-headline-md font-bold text-on-surface">Mantenimiento</h4>
+            <p class="mt-2 text-sm leading-relaxed text-on-surface-variant">Planes preventivos y predictivos que alargan la vida útil de tus equipos y reducen costos operativos.</p>
+          </a>
+          <a href="/reparaciones/" class="group block rounded-3xl border border-outline-variant bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-lg">
+            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-container text-on-primary-container transition-colors group-hover:bg-primary group-hover:text-white">
+              <span class="material-symbols-outlined">build</span>
+            </div>
+            <h4 class="font-headline-md text-headline-md font-bold text-on-surface">Reparaciones</h4>
+            <p class="mt-2 text-sm leading-relaxed text-on-surface-variant">Diagnóstico y reparación de fallas con repuestos originales y tiempos de respuesta rápidos.</p>
+          </a>
+          <a href="#contacto" class="group block rounded-3xl border border-outline-variant bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-secondary/40 hover:shadow-lg">
+            <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-secondary-container text-on-secondary-container transition-colors group-hover:bg-secondary group-hover:text-white">
+              <span class="material-symbols-outlined">support_agent</span>
+            </div>
+            <h4 class="font-headline-md text-headline-md font-bold text-on-surface">Soporte Técnico</h4>
+            <p class="mt-2 text-sm leading-relaxed text-on-surface-variant">Asistencia 24/7 con técnicos certificados y monitoreo remoto de tus equipos en tiempo real.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CALCULADORA DE BTU/H ============ -->
+    <section id="calculadora" class="bg-white py-20">
+      <div class="mx-auto max-w-container-max px-lg">
+        <div class="mb-12 text-center">
+          <span class="font-label-md font-bold text-primary">CALCULADORA DE BTU/H</span>
+          <h2 class="mt-2 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">¿Qué capacidad de aire acondicionado necesito?</h2>
+          <p class="mx-auto mt-2 max-w-2xl font-body-md text-on-surface-variant">Ingresa las medidas de tu espacio y obtén una estimación de la capacidad de enfriamiento recomendada antes de comprar.</p>
+        </div>
+
+        <div class="grid gap-8 lg:grid-cols-2">
+          <!-- Formulario -->
+          <div class="rounded-3xl border border-outline-variant bg-surface-container-low p-6 shadow-sm sm:p-8">
+            <h3 class="font-headline-md text-headline-md font-bold text-on-surface">Datos de tu espacio</h3>
+            <p class="mt-1 text-sm text-on-surface-variant">Las medidas se ingresan en metros (m).</p>
+            <form id="btuForm" class="mt-6" novalidate>
+              <div class="grid grid-cols-1 gap-md sm:grid-cols-2">
+                <div>
+                  <label class="field-label" for="btuLargo">Largo del espacio (m)</label>
+                  <input id="btuLargo" class="input" type="number" inputmode="decimal" step="0.1" min="0.5" max="60" placeholder="ej: 4" required>
+                </div>
+                <div>
+                  <label class="field-label" for="btuAncho">Ancho del espacio (m)</label>
+                  <input id="btuAncho" class="input" type="number" inputmode="decimal" step="0.1" min="0.5" max="60" placeholder="ej: 4" required>
+                </div>
+                <div>
+                  <label class="field-label" for="btuAlto">Altura del techo (m)</label>
+                  <input id="btuAlto" class="input" type="number" inputmode="decimal" step="0.1" min="1.5" max="10" placeholder="ej: 2.5" value="2.5" required>
+                </div>
+                <div>
+                  <label class="field-label" for="btuPersonas">Cantidad de personas</label>
+                  <input id="btuPersonas" class="input" type="number" inputmode="numeric" step="1" min="0" max="200" placeholder="ej: 2" value="2" required>
+                </div>
+                <div>
+                  <label class="field-label" for="btuVentanas">Cantidad de ventanas</label>
+                  <input id="btuVentanas" class="input" type="number" inputmode="numeric" step="1" min="0" max="50" placeholder="ej: 1" value="1" required>
+                </div>
+                <div>
+                  <label class="field-label" for="btuSol">Exposición al sol</label>
+                  <select id="btuSol" class="input">
+                    <option value="baja">Baja (sombreada)</option>
+                    <option value="media" selected>Media</option>
+                    <option value="alta">Alta (sol directo)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mt-md">
+                <label class="field-label" for="btuTipo">Tipo de espacio</label>
+                <select id="btuTipo" class="input">
+                  <option value="habitacion" selected>Habitación</option>
+                  <option value="sala">Sala de estar</option>
+                  <option value="oficina">Oficina</option>
+                  <option value="comercio">Comercio / local</option>
+                  <option value="cocina">Cocina</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <p id="btuMsg" class="mt-md hidden rounded-xl px-4 py-3 font-body-md"></p>
+              <button id="btuBtn" type="submit" class="mt-md inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">
+                <span class="material-symbols-outlined">calculate</span>
+                Calcular BTU/h
+              </button>
+            </form>
+          </div>
+
+          <!-- Resultado -->
+          <div class="overflow-hidden rounded-3xl border border-outline-variant bg-surface-container-low shadow-sm">
+            <div id="btuEmpty" class="flex h-full flex-col items-center justify-center gap-4 p-6 text-center sm:p-8">
+              <span class="material-symbols-outlined text-6xl text-primary/40" style="font-variation-settings: 'FILL' 1;">thermostat</span>
+              <p class="font-headline-md text-headline-md font-bold text-on-surface">Descubre la capacidad recomendada</p>
+              <p class="max-w-sm text-sm text-on-surface-variant">Completa los datos de tu espacio y presiona "Calcular BTU/h" para ver una estimación y los equipos disponibles.</p>
+            </div>
+            <div id="btuResultContent" class="hidden h-full flex-col justify-between rounded-3xl bg-gradient-to-br from-primary via-brand-700 to-secondary p-6 shadow-xl sm:p-8">
+              <div>
+                <span class="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1.5 font-label-md font-bold text-white ring-1 ring-inset ring-white/25">
+                  <span class="material-symbols-outlined text-sm">ac_unit</span>
+                  RESULTADO
+                </span>
+                <p class="mt-5 font-label-md font-bold tracking-wide text-white/80">CAPACIDAD RECOMENDADA</p>
+                <p id="btuValor" class="mt-1 text-4xl font-extrabold tracking-tight text-white sm:text-display-lg">—</p>
+                <p class="mt-2 text-sm text-white/85">Estimación para el espacio indicado, según el cálculo orientativo.</p>
+                <div class="mt-6">
+                  <div class="h-3 w-full overflow-hidden rounded-full bg-white/25">
+                    <div id="btuGauge" class="h-full rounded-full bg-white transition-all duration-700" style="width: 0%"></div>
+                  </div>
+                  <div class="mt-2 flex justify-between text-xs font-semibold text-white/70">
+                    <span>9.000</span>
+                    <span>24.000</span>
+                    <span>48.000+</span>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-6 space-y-4">
+                <div class="rounded-2xl bg-white/10 p-4 ring-1 ring-inset ring-white/20">
+                  <p class="font-label-md font-bold text-white">EQUIPOS EN VITRINA</p>
+                  <p id="btuEquiposText" class="mt-1 text-sm text-white/85">Se mostrarán los equipos que coincidan con tu capacidad.</p>
+                </div>
+                <p class="text-xs leading-relaxed text-white/75">
+                  Este resultado es una estimación orientativa para referencia. La selección definitiva del equipo debe ser validada por un técnico especializado, considerando el aislamiento, la orientación y las condiciones particulares del espacio.
+                </p>
+                <a id="btuVer" href="/productos/" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white py-3 font-headline-md font-bold text-primary transition-all hover:bg-surface-dim">
+                  <span class="material-symbols-outlined">storefront</span>
+                  Ver equipos disponibles
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PROYECTOS ============ -->
+    <section id="proyectos" class="bg-inverse-surface py-20 text-on-inverse-surface">
+      <div class="mx-auto max-w-container-max px-lg">
+        <div class="mb-12 text-center">
+          <span class="font-label-md font-bold text-secondary-container">PROYECTOS</span>
+          <h2 class="mt-2 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-inverse-surface">Proyectos Emblemáticos</h2>
+          <p class="mx-auto mt-2 max-w-2xl font-body-md text-slate-400">Hitos de ingeniería en los centros logísticos más importantes de la región.</p>
+        </div>
+        <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="group relative h-80 overflow-hidden rounded-3xl shadow-xl">
+            <img src="/assets/img/proyectos/centro-de-distribucion-norte.webp" alt="Centro de Distribución Norte" class="h-full w-full object-cover grayscale transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0" loading="lazy" width="800" height="800">
+            <div class="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent p-6">
+              <h5 class="font-headline-md text-headline-md font-bold text-white">Centro de Distribución Norte</h5>
+              <p class="mt-1 text-sm text-slate-300">Logística Masiva</p>
+            </div>
+          </div>
+          <div class="group relative h-80 overflow-hidden rounded-3xl shadow-xl">
+            <img src="/assets/img/proyectos/torre-corporativa-delta.avif" alt="Torre Corporativa Delta" class="h-full w-full object-cover grayscale transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0" loading="lazy" width="800" height="800">
+            <div class="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent p-6">
+              <h5 class="font-headline-md text-headline-md font-bold text-white">Torre Corporativa Delta</h5>
+              <p class="mt-1 text-sm text-slate-300">Climatización Central</p>
+            </div>
+          </div>
+          <div class="group relative h-80 overflow-hidden rounded-3xl shadow-xl">
+            <img src="/assets/img/proyectos/hub-logistico-pharma.png" alt="Hub Logístico Pharma" class="h-full w-full object-cover grayscale transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0" loading="lazy" width="800" height="800">
+            <div class="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent p-6">
+              <h5 class="font-headline-md text-headline-md font-bold text-white">Hub Logístico Pharma</h5>
+              <p class="mt-1 text-sm text-slate-300">Control Farmacéutico</p>
+            </div>
+          </div>
+          <div class="group relative h-80 overflow-hidden rounded-3xl shadow-xl">
+            <img src="/assets/img/proyectos/planta-procesadora-gourmet.jpg" alt="Planta Procesadora Gourmet" class="h-full w-full object-cover grayscale transition-all duration-700 group-hover:scale-105 group-hover:grayscale-0" loading="lazy" width="800" height="800">
+            <div class="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-slate-900/90 via-slate-900/30 to-transparent p-6">
+              <h5 class="font-headline-md text-headline-md font-bold text-white">Planta Procesadora Gourmet</h5>
+              <p class="mt-1 text-sm text-slate-300">Cadena de Frío</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TESTIMONIOS ============ -->
+    <section id="testimonios" class="bg-white py-20">
+      <div class="mx-auto max-w-container-max px-lg">
+        <div class="mb-12 text-center">
+          <span class="font-label-md font-bold text-primary">TESTIMONIOS</span>
+          <h2 class="mt-2 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">Lo que dicen nuestros clientes</h2>
+          <p class="mx-auto mt-2 max-w-2xl font-body-md text-on-surface-variant">Empresas que confían en RefriMaster para su cadena de frío.</p>
+        </div>
+        <div class="grid gap-6 md:grid-cols-3">
+          <div class="glass-card relative rounded-3xl p-8">
+            <span class="material-symbols-outlined absolute -left-2 -top-5 text-5xl text-primary opacity-20" style="font-variation-settings: 'FILL' 1;">format_quote</span>
+            <p class="mb-6 font-body-lg italic text-on-surface-variant">"RefriMaster transformó nuestra gestión operativa. El monitoreo en tiempo real de los chillers nos ha ahorrado miles en mantenimientos no programados."</p>
+            <div class="flex items-center gap-md">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary font-bold text-white">RM</div>
+              <div>
+                <p class="font-bold text-on-surface">Ing. Roberto Martínez</p>
+                <p class="text-sm text-on-surface-variant">Director de Operaciones, LogiFreez</p>
+              </div>
+            </div>
+          </div>
+          <div class="glass-card relative z-10 rounded-3xl p-8 shadow-xl ring-1 ring-primary/30">
+            <span class="material-symbols-outlined absolute -left-2 -top-5 text-5xl text-primary opacity-20" style="font-variation-settings: 'FILL' 1;">format_quote</span>
+            <p class="mb-6 font-body-lg italic text-on-surface-variant">"La precisión de la plataforma en la asignación de técnicos y el control de inventario es inigualable. Recomendado para empresas con flotas grandes."</p>
+            <div class="flex items-center gap-md">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-secondary to-primary font-bold text-white">ES</div>
+              <div>
+                <p class="font-bold text-on-surface">Elena Solís</p>
+                <p class="text-sm text-on-surface-variant">Gerente de Mantenimiento, PharmaCool</p>
+              </div>
+            </div>
+          </div>
+          <div class="glass-card relative rounded-3xl p-8">
+            <span class="material-symbols-outlined absolute -left-2 -top-5 text-5xl text-primary opacity-20" style="font-variation-settings: 'FILL' 1;">format_quote</span>
+            <p class="mb-6 font-body-lg italic text-on-surface-variant">"Instalamos 45 unidades de aires centrales en tiempo récord gracias a la coordinación del equipo de RefriMaster. Soporte excepcional."</p>
+            <div class="flex items-center gap-md">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary font-bold text-white">CV</div>
+              <div>
+                <p class="font-bold text-on-surface">Carlos Villanueva</p>
+                <p class="text-sm text-on-surface-variant">Desarrollador, Delta Towers</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONTACTO ============ -->
+    <section id="contacto" class="relative overflow-hidden bg-surface-container-low py-20">
+      <div class="pointer-events-none absolute inset-0">
+        <div class="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-secondary-container opacity-60 blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-primary-container opacity-70 blur-3xl"></div>
+      </div>
+      <div class="relative z-10 mx-auto max-w-container-max px-lg">
+        <div class="mb-12 max-w-2xl">
+          <span class="font-label-md font-bold text-primary">CONTACTO</span>
+          <h2 class="mt-2 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">Hablemos de tu proyecto</h2>
+          <p class="mt-2 font-body-md text-on-surface-variant">Cotizaciones, instalaciones, mantenimiento o soporte técnico. Nuestro equipo te responde en menos de 24 horas.</p>
+        </div>
+
+        <div class="grid gap-8 lg:grid-cols-5">
+          <div class="space-y-4 lg:col-span-2">
+            <a href="tel:+18091234567" class="flex items-center gap-md rounded-3xl border border-outline-variant bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-container text-on-primary-container">
+                <span class="material-symbols-outlined">call</span>
+              </span>
+              <div>
+                <p class="font-label-md font-bold text-on-surface-variant">TELÉFONO</p>
+                <p class="font-headline-md text-headline-md font-bold text-on-surface">+1 809 123 4567</p>
+              </div>
+            </a>
+            <a href="mailto:contacto@refrimaster.com" class="flex items-center gap-md rounded-3xl border border-outline-variant bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary-container text-on-secondary-container">
+                <span class="material-symbols-outlined">alternate_email</span>
+              </span>
+              <div>
+                <p class="font-label-md font-bold text-on-surface-variant">CORREO</p>
+                <p class="font-headline-md text-headline-md break-all font-bold text-on-surface">contacto@refrimaster.com</p>
+              </div>
+            </a>
+            <div class="flex items-center gap-md rounded-3xl border border-outline-variant bg-white p-6 shadow-sm">
+              <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-container text-on-primary-container">
+                <span class="material-symbols-outlined">location_on</span>
+              </span>
+              <div>
+                <p class="font-label-md font-bold text-on-surface-variant">UBICACIÓN</p>
+                <p class="font-headline-md text-headline-md font-bold text-on-surface">Santiago de los Caballeros, República Dominicana</p>
+              </div>
+            </div>
+            <div class="rounded-3xl border border-outline-variant bg-white p-6 shadow-sm">
+              <div class="flex items-center gap-md">
+                <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary-container text-on-secondary-container">
+                  <span class="material-symbols-outlined">schedule</span>
+                </span>
+                <div class="flex-1">
+                  <p class="font-label-md font-bold text-on-surface-variant">HORARIO</p>
+                  <p class="font-headline-md text-headline-md font-bold text-on-surface">Lun – Vie: 8:00 am – 6:00 pm</p>
+                </div>
+              </div>
+              <div class="mt-4 flex items-center justify-between gap-2 border-t border-outline-variant pt-4 text-sm text-on-surface-variant">
+                <span>Sábados: 8:00 am – 1:00 pm</span>
+                <span class="font-bold text-primary">Soporte 24/7</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-3xl border border-outline-variant bg-white p-6 shadow-sm sm:p-8 lg:col-span-3">
+            <h3 class="font-headline-md text-headline-md font-bold text-on-surface">Envíanos tu consulta</h3>
+            <p class="mb-6 mt-1 font-body-md text-on-surface-variant">Completa el formulario y te contactaremos a la brevedad.</p>
+            <form id="contactForm" novalidate>
+              <div class="grid gap-md sm:grid-cols-2">
+                <div>
+                  <label for="ctNombre" class="field-label">Nombre completo</label>
+                  <input id="ctNombre" class="input" type="text" placeholder="Tu nombre" autocomplete="name" required>
+                </div>
+                <div>
+                  <label for="ctCorreo" class="field-label">Correo electrónico</label>
+                  <input id="ctCorreo" class="input" type="email" placeholder="tu@empresa.com" autocomplete="email" required>
+                </div>
+                <div>
+                  <label for="ctTelefono" class="field-label">Teléfono</label>
+                  <input id="ctTelefono" class="input" type="tel" placeholder="+1 809 000 0000" autocomplete="tel">
+                </div>
+                <div>
+                  <label for="ctAsunto" class="field-label">Asunto</label>
+                  <select id="ctAsunto" class="input">
+                    <option value="Cotización">Cotización</option>
+                    <option value="Instalación">Instalación</option>
+                    <option value="Mantenimiento">Mantenimiento</option>
+                    <option value="Soporte técnico">Soporte técnico</option>
+                    <option value="Otro">Otro</option>
+                  </select>
+                </div>
+              </div>
+              <div class="mt-md">
+                <label for="ctMensaje" class="field-label">Mensaje</label>
+                <textarea id="ctMensaje" class="input" rows="5" placeholder="Cuéntanos en qué podemos ayudarte…" required></textarea>
+              </div>
+              <div id="ctMsg" class="mt-md hidden rounded-xl px-4 py-3 font-body-md"></div>
+              <button id="ctBtn" type="submit" class="mt-md w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Enviar consulta</button>
+              <p class="mt-4 text-center text-sm text-on-surface-variant">¿Prefieres llamarnos? <a href="tel:+18091234567" class="font-semibold text-primary hover:text-primary-hover">+1 809 123 4567</a></p>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="w-full bg-inverse-surface text-slate-300">
+    <div class="mx-auto grid max-w-container-max grid-cols-1 gap-10 px-lg py-16 md:grid-cols-4">
+      <div class="space-y-4">
+        <div class="flex items-center gap-sm">
+          <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary">
+            <span class="material-symbols-outlined text-headline-md text-white" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+          </span>
+          <span class="font-headline-md text-headline-md font-bold text-white">Refri<span class="text-secondary-container">Master</span></span>
+        </div>
+        <p class="text-sm leading-relaxed text-slate-400">Líderes en soluciones de refrigeración inteligente para el sector industrial y comercial.</p>
+        <div class="flex gap-md">
+          <a class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-secondary-container" href="#" title="Compartir"><span class="material-symbols-outlined">share</span></a>
+          <a class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-secondary-container" href="mailto:contacto@refrimaster.com" title="Email"><span class="material-symbols-outlined">alternate_email</span></a>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-400">
+          <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-secondary-container">location_on</span>Santiago de los Caballeros, República Dominicana</li>
+          <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-secondary-container">call</span>+1 809 123 4567</li>
+          <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-secondary-container">mail</span>contacto@refrimaster.com</li>
+        </ul>
+      </div>
+      <div>
+        <h6 class="mb-4 font-label-md font-bold text-white">RECURSOS</h6>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#catalogo" class="transition-colors hover:text-secondary-container">Guía de Instalación</a></li>
+          <li><a href="#servicios" class="transition-colors hover:text-secondary-container">Seguimiento de Flota</a></li>
+          <li><a href="#servicios" class="transition-colors hover:text-secondary-container">Documentación Técnica</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6 class="mb-4 font-label-md font-bold text-white">COMPAÑÍA</h6>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#inicio" class="transition-colors hover:text-secondary-container">Sobre Nosotros</a></li>
+          <li><a href="#proyectos" class="transition-colors hover:text-secondary-container">Proyectos</a></li>
+          <li><a href="#contacto" class="transition-colors hover:text-secondary-container">Contacto</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6 class="mb-4 font-label-md font-bold text-white">LEGAL</h6>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#" class="transition-colors hover:text-secondary-container">Política de Privacidad</a></li>
+          <li><a href="#" class="transition-colors hover:text-secondary-container">Términos de Servicio</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mx-auto flex max-w-container-max flex-col items-center justify-between gap-4 border-t border-slate-800 px-lg py-6 md:flex-row">
+      <p class="text-center text-sm text-slate-400 md:text-left">© <span id="year"></span> RefriMaster. Todos los derechos reservados.</p>
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-secondary-container">verified_user</span>
+        <span class="font-label-md text-slate-400">Sistema Certificado ISO 9001</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ MODAL LOGIN ============ -->
+  <div id="modal-login" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="login"></div>
+    <div class="modal-card relative w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div class="grid lg:grid-cols-[0.9fr_1.1fr]">
+        <div class="hero-gradient relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <span class="material-symbols-outlined pointer-events-none absolute -right-16 -top-16 h-72 w-72 rotate-12 text-white/10" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+          <span class="material-symbols-outlined pointer-events-none absolute -bottom-16 -left-16 h-72 w-72 -rotate-12 text-white/10" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+          <div class="relative">
+            <div class="flex items-center gap-2.5">
+              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+                <span class="material-symbols-outlined text-white">ac_unit</span>
+              </span>
+              <span class="font-headline-md text-headline-md font-bold text-white">Refri<span class="text-secondary-container">Master</span></span>
+            </div>
+            <p class="mt-6 font-headline-lg text-headline-lg font-bold leading-tight">Bienvenido de vuelta</p>
+            <p class="mt-2 font-body-sm text-white/80">Accede a tu panel de gestión inteligente de refrigeración.</p>
+            <ul class="mt-6 space-y-3 font-body-sm text-white/90">
+              <li class="flex items-center gap-2.5"><span class="material-symbols-outlined h-4 w-4 shrink-0 text-secondary-container">check_circle</span>Instalaciones en tiempo real</li>
+              <li class="flex items-center gap-2.5"><span class="material-symbols-outlined h-4 w-4 shrink-0 text-secondary-container">check_circle</span>Inventario, técnicos y facturación</li>
+              <li class="flex items-center gap-2.5"><span class="material-symbols-outlined h-4 w-4 shrink-0 text-secondary-container">check_circle</span>Soporte técnico 24/7</li>
+            </ul>
+          </div>
+          <div class="relative">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 font-label-md text-white ring-1 ring-white/20">
+              <span class="material-symbols-outlined text-sm">ac_unit</span> REFRIGERACIÓN 4.0
+            </span>
+          </div>
+        </div>
+        <div class="relative p-8 sm:p-10">
+          <button data-close="login" class="absolute right-4 top-4 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-surface-variant" aria-label="Cerrar">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          <div class="flex items-center gap-2.5 lg:hidden">
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary">
+              <span class="material-symbols-outlined text-headline-md text-white" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+            </span>
+            <span class="font-headline-md text-headline-md font-bold text-on-surface">RefriMaster</span>
+          </div>
+          <h3 class="mt-6 font-headline-lg text-headline-lg font-bold tracking-tight text-on-surface lg:mt-0">Iniciar Sesión</h3>
+          <p class="mt-1 font-body-sm text-on-surface-variant">Accede a tu cuenta RefriMaster</p>
+          <p id="loginMsg" class="mt-4 hidden rounded-lg px-3 py-2 text-sm"></p>
+          <form id="loginForm" class="mt-6 space-y-4" novalidate>
+            <div>
+              <label class="field-label" for="loginUser">Usuario o correo</label>
+              <input id="loginUser" class="input" type="text" placeholder="ej: juan.perez" autocomplete="username" required>
+            </div>
+            <div>
+              <label class="field-label" for="loginPass">Contraseña</label>
+              <input id="loginPass" class="input" type="password" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <button id="loginBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Iniciar Sesión</button>
+          </form>
+          <p class="mt-3 text-center font-body-sm text-on-surface-variant">
+            <button type="button" data-switch="recover" class="font-bold text-primary hover:underline">¿Olvidaste tu contraseña?</button>
+          </p>
+          <p class="mt-5 text-center font-body-sm text-on-surface-variant">¿No tienes cuenta? <button type="button" data-switch="register" class="font-bold text-primary hover:underline">Regístrate</button></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL REGISTRO ============ -->
+  <div id="modal-register" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="register"></div>
+    <div class="modal-card relative w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl" style="max-height:92vh">
+      <div class="grid max-h-[92vh] overflow-y-auto lg:grid-cols-[0.9fr_1.1fr]">
+        <div class="hero-gradient relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col lg:justify-between">
+          <span class="material-symbols-outlined pointer-events-none absolute -right-16 -top-16 h-72 w-72 rotate-12 text-white/10" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+          <span class="material-symbols-outlined pointer-events-none absolute -bottom-16 -left-16 h-72 w-72 -rotate-12 text-white/10" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+          <div class="relative">
+            <div class="flex items-center gap-2.5">
+              <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/25">
+                <span class="material-symbols-outlined text-white">ac_unit</span>
+              </span>
+              <span class="font-headline-md text-headline-md font-bold text-white">Refri<span class="text-secondary-container">Master</span></span>
+            </div>
+            <p class="mt-6 font-headline-lg text-headline-lg font-bold leading-tight">Crea tu cuenta</p>
+            <p class="mt-2 font-body-sm text-white/80">Únete a la plataforma de refrigeración industrial inteligente.</p>
+            <ul class="mt-6 space-y-3 font-body-sm text-white/90">
+              <li class="flex items-center gap-2.5"><span class="material-symbols-outlined h-4 w-4 shrink-0 text-secondary-container">check_circle</span>Solicita demos e instalaciones</li>
+              <li class="flex items-center gap-2.5"><span class="material-symbols-outlined h-4 w-4 shrink-0 text-secondary-container">check_circle</span>Seguimiento de tus equipos</li>
+              <li class="flex items-center gap-2.5"><span class="material-symbols-outlined h-4 w-4 shrink-0 text-secondary-container">check_circle</span>Soporte técnico 24/7</li>
+            </ul>
+          </div>
+          <div class="relative">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 font-label-md text-white ring-1 ring-white/20">
+              <span class="material-symbols-outlined text-sm">ac_unit</span> REFRIGERACIÓN 4.0
+            </span>
+          </div>
+        </div>
+        <div class="relative p-8 sm:p-10">
+          <button data-close="register" class="absolute right-4 top-4 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-surface-variant" aria-label="Cerrar">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+          <div class="flex items-center gap-2.5 lg:hidden">
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary">
+              <span class="material-symbols-outlined text-headline-md text-white" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+            </span>
+            <span class="font-headline-md text-headline-md font-bold text-on-surface">RefriMaster</span>
+          </div>
+          <h3 class="mt-6 font-headline-lg text-headline-lg font-bold tracking-tight text-on-surface lg:mt-0">Crear Cuenta</h3>
+          <p class="mt-1 font-body-sm text-on-surface-variant">Únete a RefriMaster como cliente</p>
+          <p id="registerMsg" class="mt-4 hidden rounded-lg px-3 py-2 text-sm"></p>
+          <form id="registerForm" class="mt-6 space-y-4" novalidate>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="field-label" for="regFirst">Nombre</label>
+                <input id="regFirst" class="input" type="text" placeholder="Juan">
+              </div>
+              <div>
+                <label class="field-label" for="regLast">Apellido</label>
+                <input id="regLast" class="input" type="text" placeholder="Pérez">
+              </div>
+            </div>
+            <div>
+              <label class="field-label" for="regUser">Usuario</label>
+              <input id="regUser" class="input" type="text" placeholder="juan.perez" autocomplete="username" required>
+            </div>
+            <div>
+              <label class="field-label" for="regEmail">Correo electrónico</label>
+              <input id="regEmail" class="input" type="email" placeholder="juan@empresa.com" autocomplete="email" required>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="field-label" for="regPhone">Teléfono</label>
+                <input id="regPhone" class="input" type="tel" placeholder="+1 809 000 0000">
+              </div>
+              <div>
+                <label class="field-label" for="regDocType">Tipo de documento</label>
+                <select id="regDocType" class="input">
+                  <option value="cc" selected>Cédula</option>
+                  <option value="pasaporte">Pasaporte</option>
+                  <option value="rnc">RNC (empresa)</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="field-label" for="regDoc">Número de documento</label>
+              <input id="regDoc" class="input" type="text" placeholder="Ej: 001-1234567-8" required>
+            </div>
+            <div>
+              <label class="field-label" for="regDirec">Dirección</label>
+              <input id="regDirec" class="input" type="text" placeholder="Calle, número, sector, ciudad">
+            </div>
+            <div>
+              <label class="field-label" for="regPass">Contraseña</label>
+              <input id="regPass" class="input" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+              <p class="mt-1.5 text-xs text-slate-500">Mínimo 8 caracteres. Evita contraseñas solo numéricas o muy comunes.</p>
+            </div>
+            <button id="registerBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Crear Cuenta</button>
+          </form>
+          <p class="mt-5 text-center font-body-sm text-on-surface-variant">¿Ya tienes cuenta? <button type="button" data-switch="login" class="font-bold text-primary hover:underline">Inicia sesión</button></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL RECUPERAR CONTRASEÑA ============ -->
+  <div id="modal-recover" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="recover"></div>
+    <div class="modal-card relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div class="relative p-8 sm:p-10">
+        <button data-close="recover" class="absolute right-4 top-4 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-surface-variant" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <div class="flex items-center gap-2.5">
+          <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary">
+            <span class="material-symbols-outlined text-headline-md text-white" style="font-variation-settings: 'FILL' 1;">lock_reset</span>
+          </span>
+          <span class="font-headline-md text-headline-md font-bold text-on-surface">RefriMaster</span>
+        </div>
+        <h3 class="mt-6 font-headline-lg text-headline-lg font-bold tracking-tight text-on-surface">Recuperar contraseña</h3>
+        <p class="mt-1 font-body-sm text-on-surface-variant">Ingresa tu correo y te enviaremos un enlace para restablecerla.</p>
+        <p id="recoverMsg" class="mt-4 hidden rounded-lg px-3 py-2 text-sm"></p>
+        <form id="recoverForm" class="mt-6 space-y-4" novalidate>
+          <div>
+            <label class="field-label" for="recoverEmail">Correo electrónico</label>
+            <input id="recoverEmail" class="input" type="email" placeholder="juan@empresa.com" autocomplete="email" required>
+          </div>
+          <button id="recoverBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Enviar enlace</button>
+        </form>
+        <p class="mt-5 text-center font-body-sm text-on-surface-variant">¿Recordaste tu contraseña? <button type="button" data-switch="login" class="font-bold text-primary hover:underline">Inicia sesión</button></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL RESTABLECER CONTRASEÑA ============ -->
+  <div id="modal-reset" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="reset"></div>
+    <div class="modal-card relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <div class="relative p-8 sm:p-10">
+        <button data-close="reset" class="absolute right-4 top-4 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-surface-variant" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <div class="flex items-center gap-2.5">
+          <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary">
+            <span class="material-symbols-outlined text-headline-md text-white" style="font-variation-settings: 'FILL' 1;">lock_reset</span>
+          </span>
+          <span class="font-headline-md text-headline-md font-bold text-on-surface">RefriMaster</span>
+        </div>
+        <h3 class="mt-6 font-headline-lg text-headline-lg font-bold tracking-tight text-on-surface">Nueva contraseña</h3>
+        <p id="resetEmailHint" class="mt-1 font-body-sm text-on-surface-variant"></p>
+        <p id="resetMsg" class="mt-4 hidden rounded-lg px-3 py-2 text-sm"></p>
+        <form id="resetForm" class="mt-6 space-y-4" novalidate>
+          <input type="hidden" id="resetToken">
+          <div>
+            <label class="field-label" for="resetPass">Nueva contraseña</label>
+            <input id="resetPass" class="input" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+            <p class="mt-1.5 text-xs text-slate-500">Mínimo 8 caracteres. Evita contraseñas solo numéricas o muy comunes.</p>
+          </div>
+          <div>
+            <label class="field-label" for="resetPass2">Confirmar nueva contraseña</label>
+            <input id="resetPass2" class="input" type="password" placeholder="Repite la contraseña" autocomplete="new-password" required>
+          </div>
+          <button id="resetBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Restablecer contraseña</button>
+        </form>
+        <div id="resetDone" class="mt-6 hidden">
+          <div class="flex flex-col items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-6 text-center">
+            <span class="material-symbols-outlined text-3xl text-emerald-600" style="font-variation-settings: 'FILL' 1;">verified</span>
+            <p class="font-body-sm text-emerald-800">Contraseña restablecida correctamente. Ya puedes iniciar sesión con tu nueva contraseña.</p>
+            <button type="button" data-switch="login" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Iniciar Sesión</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/js/whatsapp.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" role="img" aria-label="Planta Procesadora Gourmet">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a4a6b"/>
+      <stop offset="1" stop-color="#131b2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="560" fill="url(#bg)"/>
+  <circle cx="400" cy="250" r="130" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="2" stroke-dasharray="2 12"/>
+  <circle cx="400" cy="250" r="84" fill="#ffffff" fill-opacity="0.06"/>
+  <g stroke="#93ccff" stroke-width="9" stroke-linecap="round" transform="translate(400 250)">
+    <path d="M0 -54 L0 54"/><path d="M-54 0 L54 0"/>
+    <path d="M-38 -38 L38 38"/><path d="M38 -38 L-38 38"/>
+    <path d="M0 -54 L-14 -33"/><path d="M0 -54 L14 -33"/>
+    <path d="M0 54 L-14 33"/><path d="M0 54 L14 33"/>
+    <path d="M-54 0 L-33 -14"/><path d="M-54 0 L-33 14"/>
+    <path d="M54 0 L33 -14"/><path d="M54 0 L33 14"/>
+  </g>
+  <text x="400" y="470" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700" fill="#ffffff">Planta Procesadora Gourmet</text>
+  <text x="400" y="500" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="15" fill="#ffffff" fill-opacity="0.55">Proyecto RefriMaster</text>
+</svg>

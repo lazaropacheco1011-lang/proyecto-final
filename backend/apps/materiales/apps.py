@@ -1,0 +1,7 @@
+from django.apps import AppConfig
+
+
+class MaterialesConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'apps.materiales'
+    verbose_name = 'Materiales e inventario'

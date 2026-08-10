@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 780" width="1200" height="780" font-family="Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="pg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0284C7"/><stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="chart" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0EA5E9" stop-opacity="0.35"/><stop offset="1" stop-color="#0EA5E9" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="cw" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7DD3FC"/><stop offset="1" stop-color="#0EA5E9"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#020617" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="780" fill="#0F172A"/>
+
+  <!-- top bar -->
+  <rect width="1200" height="72" fill="#1E293B"/>
+  <rect x="0" y="72" width="1200" height="1.5" fill="#334155"/>
+  <g transform="translate(28,20)">
+    <rect width="34" height="34" rx="9" fill="url(#pg)"/>
+    <path d="M17 8c1 3.4.5 6.8-1.3 8.9L17 28l1.3-11.1C16.5 14.8 16 11.4 17 8z" fill="#fff"/>
+    <circle cx="17" cy="14" r="1.5" fill="#0F172A"/>
+  </g>
+  <text x="74" y="41" fill="#F8FAFC" font-size="19" font-weight="700">RefriMaster</text>
+  <text x="74" y="58" fill="#94A3B8" font-size="11.5" letter-spacing="0.08">PANEL DE CONTROL · REFRIGERACIÓN 4.0</text>
+
+  <g transform="translate(640,22)">
+    <rect width="130" height="30" rx="15" fill="#0F172A" stroke="#334155"/>
+    <circle cx="19" cy="15" r="5" fill="#22C55E"/>
+    <text x="31" y="20" fill="#E2E8F0" font-size="12">Sistema en línea</text>
+  </g>
+  <g transform="translate(795,22)">
+    <rect width="60" height="30" rx="8" fill="#1E293B" stroke="#334155"/>
+    <path d="M12 15a4 4 0 0 1 8 0v3h-8v-3z" fill="none" stroke="#7DD3FC" stroke-width="1.6"/>
+    <circle cx="16" cy="15" r="1.6" fill="#0EA5E9"/>
+    <path d="M10 18h12" stroke="#7DD3FC" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
+  <g transform="translate(868,22)">
+    <rect width="84" height="30" rx="8" fill="#1E293B" stroke="#334155"/>
+    <path d="M6 22l6-8 5 4 5-9 7 13" fill="none" stroke="#06B6D4" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="6" cy="22" r="2.4" fill="#22C55E"/>
+  </g>
+  <g transform="translate(1086,18)">
+    <circle cx="19" cy="19" r="17" fill="url(#pg)"/>
+    <text x="19" y="25" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">CA</text>
+  </g>
+
+  <!-- sidebar -->
+  <rect x="0" y="73.5" width="236" height="707" fill="#1E293B"/>
+  <g fill="#94A3B8">
+    <g transform="translate(28,120)"><rect x="-8" y="-7" width="196" height="38" rx="9" fill="#0284C7"/><text x="0" y="12" fill="#F8FAFC" font-size="13.5">▦ &#160;Inicio</text></g>
+    <g transform="translate(28,176)"><text x="0" y="12" font-size="13.5">❄ &#160;Instalaciones</text></g>
+    <g transform="translate(28,232)"><text x="0" y="12" font-size="13.5">▤ &#160;Inventario</text></g>
+    <g transform="translate(28,288)"><text x="0" y="12" font-size="13.5">◉ &#160;Clientes</text></g>
+    <g transform="translate(28,344)"><text x="0" y="12" font-size="13.5">◔ &#160;Mantenimiento</text></g>
+    <g transform="translate(28,400)"><text x="0" y="12" font-size="13.5">▥ &#160;Reportes</text></g>
+  </g>
+
+  <!-- main -->
+  <g filter="url(#sh)">
+    <!-- stats row -->
+    <g transform="translate(268,104)">
+      <rect width="252" height="96" rx="14" fill="#1E293B" stroke="#334155"/>
+      <rect x="18" y="16" width="34" height="34" rx="9" fill="#0284C7" opacity="0.18"/>
+      <text x="34" y="38" text-anchor="middle" font-size="16">❄</text>
+      <text x="64" y="36" fill="#64748B" font-size="12">Instalaciones</text>
+      <text x="64" y="66" fill="#F8FAFC" font-size="24" font-weight="700">128</text>
+      <text x="196" y="64" fill="#22C55E" font-size="12">▲ 12%</text>
+    </g>
+    <g transform="translate(548,104)">
+      <rect width="252" height="96" rx="14" fill="#1E293B" stroke="#334155"/>
+      <rect x="18" y="16" width="34" height="34" rx="9" fill="#0EA5E9" opacity="0.18"/>
+      <text x="35" y="38" text-anchor="middle" font-size="16">●</text>
+      <text x="64" y="36" fill="#64748B" font-size="12">Clientes activos</text>
+      <text x="64" y="66" fill="#F8FAFC" font-size="24" font-weight="700">86</text>
+      <text x="196" y="64" fill="#22C55E" font-size="12">▲ 8%</text>
+    </g>
+    <g transform="translate(828,104)">
+      <rect width="252" height="96" rx="14" fill="#1E293B" stroke="#334155"/>
+      <rect x="18" y="16" width="34" height="34" rx="9" fill="#06B6D4" opacity="0.18"/>
+      <text x="35" y="38" text-anchor="middle" font-size="16">⚙</text>
+      <text x="64" y="36" fill="#64748B" font-size="12">Técnicos</text>
+      <text x="64" y="66" fill="#F8FAFC" font-size="24" font-weight="700">12</text>
+      <text x="196" y="64" fill="#22C55E" font-size="12">● 24/7</text>
+    </g>
+
+    <!-- big chart -->
+    <g transform="translate(268,228)">
+      <rect width="700" height="300" rx="16" fill="#1E293B" stroke="#334155"/>
+      <text x="24" y="34" fill="#F8FAFC" font-size="15" font-weight="600">Monitoreo de temperatura</text>
+      <text x="24" y="54" fill="#64748B" font-size="11.5">Cámara Norte · sensores en tiempo real</text>
+      <path d="M 40 250 L 40 70" stroke="#334155" stroke-width="1"/>
+      <path d="M 40 250 L 680 250" stroke="#334155" stroke-width="1"/>
+      <path d="M 52 210 C 120 190 150 200 210 170 S 300 110 360 150 S 470 200 540 120 S 620 70 668 60 L 668 250 L 52 250 Z" fill="url(#chart)"/>
+      <path d="M 52 210 C 120 190 150 200 210 170 S 300 110 360 150 S 470 200 540 120 S 620 70 668 60" fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round"/>
+      <path d="M 360 150 l -9 4 l 2 -10 l 9 -4 z" fill="#7DD3FC"/>
+      <g fill="#64748B" font-size="11" text-anchor="middle">
+        <text x="52" y="272">00:00</text><text x="205" y="272">06:00</text><text x="360" y="272">12:00</text><text x="515" y="272">18:00</text><text x="668" y="272">24:00</text>
+      </g>
+      <rect x="588" y="248" width="92" height="34" rx="17" fill="#0284C7"/>
+      <text x="634" y="270" text-anchor="middle" fill="#fff" font-size="12">-18.4 °C</text>
+    </g>
+
+    <!-- zones card -->
+    <g transform="translate(1000,228)">
+      <rect width="172" height="300" rx="16" fill="#1E293B" stroke="#334155"/>
+      <text x="18" y="32" fill="#F8FAFC" font-size="13" font-weight="600">Zonas activas</text>
+      <g font-size="11.5">
+        <rect x="16" y="52" width="140" height="46" rx="9" fill="#0F172A" stroke="#334155"/>
+        <circle cx="30" cy="75" r="4" fill="#22C55E"/>
+        <text x="42" y="71" fill="#E2E8F0">Cámara Norte</text>
+        <text x="42" y="88" fill="#7DD3FC">-18°C</text>
+        <rect x="16" y="106" width="140" height="46" rx="9" fill="#0F172A" stroke="#334155"/>
+        <circle cx="30" cy="129" r="4" fill="#22C55E"/>
+        <text x="42" y="125" fill="#E2E8F0">Refrigerada</text>
+        <text x="42" y="142" fill="#7DD3FC">4°C</text>
+        <rect x="16" y="160" width="140" height="46" rx="9" fill="#0F172A" stroke="#334155"/>
+        <circle cx="30" cy="183" r="4" fill="#FACC15"/>
+        <text x="42" y="179" fill="#E2E8F0">Congelador</text>
+        <text x="42" y="196" fill="#7DD3FC">-25°C</text>
+        <rect x="16" y="214" width="140" height="46" rx="9" fill="#0F172A" stroke="#334155"/>
+        <circle cx="30" cy="237" r="4" fill="#22C55E"/>
+        <text x="42" y="233" fill="#E2E8F0">Zona fría</text>
+        <text x="42" y="250" fill="#7DD3FC">2°C</text>
+      </g>
+    </g>
+
+    <!-- footer alert -->
+    <g transform="translate(268,556)">
+      <rect width="904" height="76" rx="14" fill="url(#pg)"/>
+      <g transform="translate(20,12)">
+        <rect width="50" height="50" rx="12" fill="#fff" opacity="0.15"/>
+        <path d="M25 10c2 6 .8 12-2.4 15.6L25 38l2.4-12.4C24 22 22.8 16 25 10z" fill="#fff"/>
+      </g>
+      <text x="92" y="30" fill="#fff" font-size="14" font-weight="700">Diagnóstico preventivo completado</text>
+      <text x="92" y="52" fill="#E0F2FE" font-size="12">Unidad 7 · Compresor estable · Eficiencia 99.8%</text>
+      <rect x="770" y="23" width="110" height="32" rx="16" fill="#0F172A" opacity="0.35"/>
+      <text x="825" y="44" text-anchor="middle" fill="#fff" font-size="12" font-weight="600">Ver reporte</text>
+    </g>
+  </g>
+</svg>

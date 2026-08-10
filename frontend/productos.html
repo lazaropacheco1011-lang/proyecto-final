@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Productos y Almacén | RefriMaster</title>
+  <meta name="description" content="Productos de refrigeración disponibles en el almacén RefriMaster: tubería de cobre, refrigerantes, equipos de aire acondicionado, manejadoras, condensadoras, evaporadores, compresores, accesorios y herramientas.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#F0F9FF', 100: '#E0F2FE', 200: '#BAE6FD', 300: '#7DD3FC',
+              400: '#38BDF8', 500: '#0EA5E9', 600: '#0284C7', 700: '#0369A1',
+              800: '#075985', 900: '#0C4A6E', 950: '#082F49'
+            },
+            primary: '#0284C7',
+            'primary-hover': '#0EA5E9',
+            'primary-container': '#E0F2FE',
+            'on-primary': '#ffffff',
+            'on-primary-container': '#075985',
+            secondary: '#06B6D4',
+            'secondary-container': '#CFFAFE',
+            'on-secondary': '#ffffff',
+            'on-secondary-container': '#075985',
+            success: '#22C55E',
+            error: '#DC2626',
+            warning: '#F59E0B',
+            'on-surface': '#0F172A',
+            'on-surface-variant': '#475569',
+            surface: '#ffffff',
+            'surface-variant': '#E0F2FE',
+            'surface-dim': '#F1F5F9',
+            'surface-container-low': '#F8FAFC',
+            'surface-container': '#F0F9FF',
+            'surface-container-high': '#E0F2FE',
+            'surface-container-highest': '#E0F2FE',
+            background: '#F8FAFC',
+            'inverse-surface': '#0F172A',
+            'on-inverse-surface': '#ffffff',
+            'outline-variant': '#E2E8F0',
+            outline: '#CBD5E1'
+          },
+          borderRadius: {
+            DEFAULT: '0.25rem',
+            lg: '0.5rem',
+            xl: '0.75rem',
+            full: '9999px'
+          },
+          spacing: {
+            unit: '4px',
+            xl: '40px',
+            lg: '24px',
+            xs: '4px',
+            gutter: '24px',
+            'container-max': '1440px',
+            md: '16px',
+            sm: '8px'
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            'headline-md': ['Inter'],
+            'body-lg': ['Inter'],
+            'headline-lg-mobile': ['Inter'],
+            'display-lg': ['Inter'],
+            'body-sm': ['Inter'],
+            'body-md': ['Inter'],
+            'label-md': ['Inter'],
+            'headline-lg': ['Inter']
+          },
+          fontSize: {
+            'headline-md': ['24px', { lineHeight: '32px', fontWeight: '600' }],
+            'body-lg': ['18px', { lineHeight: '28px', fontWeight: '400' }],
+            'headline-lg-mobile': ['24px', { lineHeight: '32px', fontWeight: '600' }],
+            'display-lg': ['48px', { lineHeight: '56px', letterSpacing: '-0.02em', fontWeight: '700' }],
+            'body-sm': ['14px', { lineHeight: '20px', fontWeight: '400' }],
+            'body-md': ['16px', { lineHeight: '24px', fontWeight: '400' }],
+            'label-md': ['12px', { lineHeight: '16px', letterSpacing: '0.05em', fontWeight: '600' }],
+            'headline-lg': ['32px', { lineHeight: '40px', letterSpacing: '-0.01em', fontWeight: '600' }]
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230284C7'/%3E%3Cpath d='M16 6c1 4 .5 8-1.5 10.5L16 27l1.5-10.5C15.5 14 15 10 16 6z' fill='white'/%3E%3Ccircle cx='16' cy='14.5' r='1.8' fill='%230284C7'/%3E%3C/svg%3E">
+</head>
+<body class="bg-background font-body-md text-body-md text-on-surface antialiased selection:bg-primary selection:text-on-primary">
+
+  <!-- NAVBAR -->
+  <nav class="fixed top-0 z-50 w-full border-b border-outline-variant bg-white/90 backdrop-blur-md transition-all duration-300">
+    <div class="mx-auto flex h-16 max-w-container-max items-center justify-between px-lg">
+      <a href="/" class="flex items-center gap-sm">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary shadow-sm">
+          <span class="material-symbols-outlined text-headline-md text-white" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+        </span>
+        <span class="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">Refri<span class="text-primary">Master</span></span>
+      </a>
+      <div class="hidden items-center gap-lg md:flex">
+        <a href="/" class="font-body-md text-slate-700 transition-colors hover:text-primary">Inicio</a>
+        <a href="/#servicios" class="font-body-md text-slate-700 transition-colors hover:text-primary">Características</a>
+        <a href="/#catalogo" class="font-body-md text-slate-700 transition-colors hover:text-primary">Soluciones</a>
+        <a href="/productos/" class="border-b-2 border-primary py-1 font-body-md font-semibold text-primary">Almacén</a>
+        <a href="/#proyectos" class="font-body-md text-slate-700 transition-colors hover:text-primary">Proyectos</a>
+        <a href="/#contacto" class="font-body-md text-slate-700 transition-colors hover:text-primary">Contacto</a>
+      </div>
+      <div class="flex items-center gap-md">
+        <a href="/carrito/" class="relative rounded-lg p-2 text-slate-700 transition-colors hover:bg-surface-dim hover:text-primary" aria-label="Carrito de compras">
+          <span class="material-symbols-outlined">shopping_cart</span>
+          <span class="cart-badge absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-xs font-bold text-white hidden">0</span>
+        </a>
+        <div id="sessionArea" class="hidden items-center gap-md"></div>
+        <button id="menuBtn" class="rounded-lg border border-outline-variant p-2 text-slate-700 transition-colors hover:text-primary md:hidden" aria-label="Abrir menú">
+          <span class="material-symbols-outlined">menu</span>
+        </button>
+      </div>
+    </div>
+    <div id="mobileMenu" class="hidden border-t border-outline-variant bg-white px-lg py-md md:hidden">
+      <div class="flex flex-col gap-sm font-body-md text-slate-700">
+        <a href="/" class="flex-1 rounded-lg border border-outline-variant px-4 py-2.5 text-center font-body-md font-semibold text-on-surface">Inicio</a>
+        <a href="/#servicios" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Características</a>
+        <a href="/#catalogo" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Soluciones</a>
+        <a href="/productos/" class="rounded-lg px-3 py-2 font-semibold text-primary transition-colors">Almacén</a>
+        <a href="/#proyectos" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Proyectos</a>
+        <a href="/#contacto" class="rounded-lg px-3 py-2 transition-colors hover:bg-surface-variant hover:text-primary">Contacto</a>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ============ CABECERA ============ -->
+    <section class="relative overflow-hidden bg-surface-container pt-16">
+      <div class="pointer-events-none absolute inset-0">
+        <div class="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-primary-container opacity-80 blur-3xl"></div>
+        <div class="absolute right-0 top-1/4 h-80 w-80 rounded-full bg-secondary-container opacity-70 blur-3xl"></div>
+        <div class="absolute -bottom-28 left-1/3 h-80 w-80 rounded-full bg-primary-container opacity-60 blur-3xl"></div>
+      </div>
+      <div class="relative z-10 mx-auto w-full max-w-container-max px-lg py-14 md:py-20">
+        <div class="mx-auto max-w-3xl text-center">
+          <span class="inline-flex w-fit items-center gap-2 rounded-full bg-primary-container px-4 py-1.5 font-label-md font-bold text-on-primary-container ring-1 ring-inset ring-primary/20">
+            <span class="material-symbols-outlined text-sm">storefront</span>
+            ALMACÉN
+          </span>
+          <h1 class="mt-5 font-headline-lg text-4xl font-extrabold leading-tight tracking-tight text-on-surface md:text-display-lg">
+            Productos de Refrigeración Disponibles
+          </h1>
+          <p class="mx-auto mt-4 max-w-2xl text-lg leading-relaxed text-on-surface-variant">
+            Equipos, refrigerantes, repuestos y herramientas listos para entrega inmediata.
+            Explora por categoría, revisa disponibilidad y cotiza con nuestro equipo.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ RESUMEN DEL INVENTARIO ============ -->
+    <section class="mx-auto max-w-container-max px-lg pt-10">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <span class="font-label-md font-bold text-primary">RESUMEN DEL INVENTARIO</span>
+          <h2 class="mt-1 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">Estado del almacén</h2>
+          <p class="mt-1 text-sm text-on-surface-variant">Visión general del stock disponible en RefriMaster.</p>
+        </div>
+        <span class="flex items-center gap-2 rounded-full bg-surface-dim px-4 py-1.5 text-xs font-bold text-on-surface-variant">
+          <span class="material-symbols-outlined text-sm">category</span>
+          <span id="kpiCategorias">—</span> categorías
+        </span>
+      </div>
+      <div id="kpiCards" class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4"></div>
+    </section>
+
+    <!-- ============ CATEGORÍAS ============ -->
+    <section class="mx-auto max-w-container-max px-lg pt-12">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <span class="font-label-md font-bold text-primary">CATEGORÍAS</span>
+          <h2 class="mt-1 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">Explora por categoría</h2>
+          <p class="mt-1 text-sm text-on-surface-variant">Selecciona una categoría para ver solo sus productos.</p>
+        </div>
+      </div>
+      <div id="productosCategorias" class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"></div>
+    </section>
+
+    <!-- ============ FILTROS ============ -->
+    <div class="sticky top-16 z-40 mt-12 border-y border-outline-variant bg-white/90 backdrop-blur-md">
+      <button id="filtrosToggle" type="button" class="flex w-full items-center justify-between gap-3 px-lg py-2.5 font-label-md font-bold text-on-surface-variant transition-colors hover:bg-surface-dim hover:text-on-surface" aria-expanded="true" aria-controls="filtrosPanel" title="Ocultar filtros">
+        <span class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-sm">filter_alt</span>
+          Filtros y búsqueda
+        </span>
+        <span id="filtrosChevron" class="material-symbols-outlined text-sm transition-transform duration-200">expand_less</span>
+      </button>
+      <div id="filtrosPanel">
+        <div class="mx-auto flex max-w-container-max flex-col gap-3 px-lg pb-4">
+          <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="relative w-full md:max-w-md">
+              <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-on-surface-variant">search</span>
+              <input id="productosSearch" type="search" placeholder="Buscar por nombre, categoría o referencia…" class="input pl-10" autocomplete="off">
+            </div>
+            <div id="productosDisp" class="av-seg" role="group" aria-label="Filtrar por disponibilidad">
+              <button data-disp="" class="av-btn active">Todos</button>
+              <button data-disp="disponible" class="av-btn">Disponibles</button>
+              <button data-disp="bajo" class="av-btn">Stock bajo</button>
+              <button data-disp="agotado" class="av-btn">Agotados</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ RESULTADOS ============ -->
+    <div id="productosResults" class="mx-auto max-w-container-max px-lg py-12"></div>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer id="contacto" class="w-full bg-inverse-surface text-slate-300">
+    <div class="mx-auto grid max-w-container-max grid-cols-1 gap-10 px-lg py-16 md:grid-cols-4">
+      <div class="space-y-4">
+        <div class="flex items-center gap-sm">
+          <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary">
+            <span class="material-symbols-outlined text-headline-md text-white" style="font-variation-settings: 'FILL' 1;">ac_unit</span>
+          </span>
+          <span class="font-headline-md text-headline-md font-bold text-white">Refri<span class="text-secondary-container">Master</span></span>
+        </div>
+        <p class="text-sm leading-relaxed text-slate-400">Líderes en soluciones de refrigeración inteligente para el sector industrial y comercial.</p>
+        <div class="flex gap-md">
+          <a class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-secondary-container" href="/" title="Compartir"><span class="material-symbols-outlined">share</span></a>
+          <a class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-white/10 hover:text-secondary-container" href="mailto:contacto@refrimaster.com" title="Email"><span class="material-symbols-outlined">alternate_email</span></a>
+        </div>
+        <ul class="space-y-2 text-sm text-slate-400">
+          <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-secondary-container">location_on</span>Santiago de los Caballeros, República Dominicana</li>
+          <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-secondary-container">call</span>+1 809 123 4567</li>
+          <li class="flex items-center gap-2"><span class="material-symbols-outlined text-sm text-secondary-container">mail</span>contacto@refrimaster.com</li>
+        </ul>
+      </div>
+      <div>
+        <h6 class="mb-4 font-label-md font-bold text-white">RECURSOS</h6>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/#catalogo" class="transition-colors hover:text-secondary-container">Guía de Instalación</a></li>
+          <li><a href="/productos/" class="transition-colors hover:text-secondary-container">Productos Disponibles</a></li>
+          <li><a href="/#servicios" class="transition-colors hover:text-secondary-container">Seguimiento de Flota</a></li>
+          <li><a href="/#servicios" class="transition-colors hover:text-secondary-container">Documentación Técnica</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6 class="mb-4 font-label-md font-bold text-white">COMPAÑÍA</h6>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/" class="transition-colors hover:text-secondary-container">Sobre Nosotros</a></li>
+          <li><a href="/#proyectos" class="transition-colors hover:text-secondary-container">Proyectos</a></li>
+          <li><a href="/#contacto" class="transition-colors hover:text-secondary-container">Contacto</a></li>
+        </ul>
+      </div>
+      <div>
+        <h6 class="mb-4 font-label-md font-bold text-white">LEGAL</h6>
+        <ul class="space-y-2 text-sm">
+          <li><a href="#" class="transition-colors hover:text-secondary-container">Política de Privacidad</a></li>
+          <li><a href="#" class="transition-colors hover:text-secondary-container">Términos de Servicio</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mx-auto flex max-w-container-max flex-col items-center justify-between gap-4 border-t border-slate-800 px-lg py-6 md:flex-row">
+      <p class="text-center text-sm text-slate-400 md:text-left">© <span id="year"></span> RefriMaster. Todos los derechos reservados.</p>
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-xl text-secondary-container">verified_user</span>
+        <span class="font-label-md text-slate-400">Sistema Certificado ISO 9001</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ MODAL PRODUCTO ============ -->
+  <div id="modal-producto" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="producto"></div>
+    <div class="modal-card relative w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <button data-close="producto" class="absolute right-4 top-4 z-10 rounded-lg bg-white/80 p-1.5 text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white" aria-label="Cerrar">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+      <div class="grid md:grid-cols-2">
+        <div class="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-gradient-to-br from-primary-container via-surface-container to-surface-container-high p-8 md:aspect-auto md:min-h-72">
+          <span id="prodImgFallback" class="hidden text-7xl text-primary/40"><span class="material-symbols-outlined text-7xl">inventory_2</span></span>
+          <img id="prodImg" src="" alt="" class="h-full w-full object-contain">
+        </div>
+        <div class="flex flex-col p-8">
+          <span id="prodCat" class="w-fit rounded-full bg-primary-container px-3 py-1 font-label-md font-bold text-on-primary-container"></span>
+          <h3 id="prodName" class="mt-3 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface"></h3>
+          <p id="prodDesc" class="mt-2 text-sm leading-relaxed text-on-surface-variant"></p>
+          <div id="prodPrice" class="mt-4 text-3xl font-extrabold tracking-tight text-primary"></div>
+          <p id="prodStock" class="mt-1 text-sm font-semibold"></p>
+          <div class="mt-4 flex items-center gap-3">
+            <span class="font-body-md text-on-surface-variant">Cantidad</span>
+            <div class="flex items-center rounded-xl border border-outline-variant">
+              <button id="prodQtyMinus" type="button" class="px-3 py-2 text-on-surface transition-colors hover:bg-surface-dim" aria-label="Disminuir cantidad"><span class="material-symbols-outlined text-sm">remove</span></button>
+              <input id="prodQty" type="number" min="1" value="1" class="w-14 border-x border-outline-variant py-2 text-center font-body-md font-bold text-on-surface focus:outline-none">
+              <button id="prodQtyPlus" type="button" class="px-3 py-2 text-on-surface transition-colors hover:bg-surface-dim" aria-label="Aumentar cantidad"><span class="material-symbols-outlined text-sm">add</span></button>
+            </div>
+          </div>
+          <div class="mt-6 flex flex-col gap-3">
+            <button id="prodCta" type="button" class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">
+              <span class="material-symbols-outlined">add_shopping_cart</span> Agregar al carrito
+            </button>
+            <button id="prodGoCart" type="button" class="hidden inline-flex items-center justify-center gap-2 rounded-xl bg-success py-3 font-label-md text-white transition-colors hover:brightness-95">
+              <span class="material-symbols-outlined">shopping_cart</span> Ver carrito
+            </button>
+            <button data-open-solicitud type="button" class="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant py-3 font-label-md text-on-surface transition-colors hover:bg-surface-dim">
+              <span class="material-symbols-outlined">mail</span> Solicitar compra por correo
+            </button>
+            <button data-close="producto" class="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant py-3 font-label-md text-on-surface transition-colors hover:bg-surface-dim">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL SOLICITUD DE COMPRA ============ -->
+  <div id="modal-solicitud" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="solicitud"></div>
+    <div class="modal-card relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <button data-close="solicitud" class="absolute right-4 top-4 z-10 rounded-lg bg-white/80 p-1.5 text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white" aria-label="Cerrar">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+      <div class="p-8">
+        <span class="inline-flex w-fit items-center gap-2 rounded-full bg-primary-container px-4 py-1.5 font-label-md font-bold text-on-primary-container ring-1 ring-inset ring-primary/20">
+          <span class="material-symbols-outlined text-sm">shopping_cart</span>
+          SOLICITUD DE COMPRA
+        </span>
+        <h3 class="mt-4 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">Solicitud de compra</h3>
+        <p class="mt-1 text-sm text-on-surface-variant">Indica la cantidad que necesitas de <span id="solProducto" class="font-semibold text-on-surface"></span> y un asesor te contactará.</p>
+        <form id="solicitudForm" class="mt-6 space-y-4" novalidate>
+          <div>
+            <label class="field-label" for="solCantidad">Cantidad</label>
+            <input id="solCantidad" class="input" type="number" min="1" step="1" value="1" required>
+          </div>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label class="field-label" for="solNombre">Nombre</label>
+              <input id="solNombre" class="input" type="text" placeholder="Tu nombre" autocomplete="name" required>
+            </div>
+            <div>
+              <label class="field-label" for="solContacto">Teléfono o correo</label>
+              <input id="solContacto" class="input" type="text" placeholder="+1 809 000 0000" required>
+            </div>
+          </div>
+          <div>
+            <label class="field-label" for="solObs">Observaciones</label>
+            <textarea id="solObs" class="input" rows="3" placeholder="Detalles de la solicitud…"></textarea>
+          </div>
+          <p id="solicitudMsg" class="hidden rounded-lg px-3 py-2 text-sm"></p>
+          <div class="flex flex-col gap-3">
+            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">
+              <span class="material-symbols-outlined">send</span> Enviar solicitud
+            </button>
+            <button type="button" data-close="solicitud" class="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant py-3 font-label-md text-on-surface transition-colors hover:bg-surface-dim">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <!-- ============ MODAL ACTUALIZAR STOCK (personal) ============ -->
+  <div id="modal-stock" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="stock"></div>
+    <div class="modal-card relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
+      <button data-close="stock" class="absolute right-4 top-4 z-10 rounded-lg bg-white/80 p-1.5 text-slate-600 shadow-sm backdrop-blur transition-colors hover:bg-white" aria-label="Cerrar">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+      <div class="p-8">
+        <span class="inline-flex w-fit items-center gap-2 rounded-full bg-primary-container px-4 py-1.5 font-label-md font-bold text-on-primary-container ring-1 ring-inset ring-primary/20">
+          <span class="material-symbols-outlined text-sm">inventory</span>
+          ACTUALIZAR STOCK
+        </span>
+        <h3 class="mt-4 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">Actualizar stock</h3>
+        <p class="mt-1 text-sm text-on-surface-variant">Ajusta las unidades disponibles de <span id="stockProducto" class="font-semibold text-on-surface"></span>.</p>
+        <form id="stockForm" class="mt-6 space-y-4" novalidate>
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label class="field-label" for="stockCantidad">Stock (unidades)</label>
+              <input id="stockCantidad" class="input" type="number" min="0" step="1" value="0" required>
+            </div>
+            <div class="flex items-end">
+              <label class="flex w-full items-center gap-2 rounded-xl border border-outline-variant px-4 py-2.5 text-sm font-semibold text-on-surface">
+                <input id="stockVisible" type="checkbox" checked class="h-4 w-4 accent-primary"> Visible en vitrina
+              </label>
+            </div>
+          </div>
+          <p id="stockMsg" class="hidden rounded-lg px-3 py-2 text-sm"></p>
+          <div class="flex flex-col gap-3">
+            <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">
+              <span class="material-symbols-outlined">save</span> Guardar cambios
+            </button>
+            <button type="button" data-close="stock" class="inline-flex items-center justify-center gap-2 rounded-xl border border-outline-variant py-3 font-label-md text-on-surface transition-colors hover:bg-surface-dim">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/whatsapp.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/productos.js"></script>
+</body>
+</html>

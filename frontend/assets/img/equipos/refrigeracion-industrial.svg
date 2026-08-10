@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" font-family="Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E0F2FE"/><stop offset="1" stop-color="#F0F9FF"/>
+    </linearGradient>
+    <linearGradient id="chiller" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/><stop offset="1" stop-color="#E2E8F0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="560" fill="url(#sky)"/>
+  <rect y="430" width="800" height="130" fill="#E0F2FE" opacity="0.7"/>
+
+  <!-- warehouse -->
+  <rect x="60" y="120" width="680" height="310" rx="10" fill="#ffffff" opacity="0.8"/>
+  <g stroke="#CBD5E1" stroke-width="2" opacity="0.8">
+    <line x1="180" y1="120" x2="180" y2="430"/><line x1="320" y1="120" x2="320" y2="430"/>
+    <line x1="480" y1="120" x2="480" y2="430"/><line x1="620" y1="120" x2="620" y2="430"/>
+  </g>
+  <rect x="60" y="120" width="680" height="14" fill="#0284C7"/>
+
+  <!-- industrial chiller unit -->
+  <g>
+    <rect x="220" y="180" width="360" height="230" rx="16" fill="url(#chiller)" stroke="#CBD5E1" stroke-width="2"/>
+    <rect x="220" y="180" width="360" height="40" rx="16" fill="#075985"/>
+    <rect x="220" y="204" width="360" height="16" fill="#075985"/>
+    <text x="400" y="207" text-anchor="middle" fill="#fff" font-size="15" font-weight="700">UNIDAD INDUSTRIAL · CHILLER</text>
+
+    <!-- condenser fan -->
+    <circle cx="330" cy="290" r="46" fill="#E2E8F0" stroke="#94A3B8" stroke-width="2"/>
+    <g stroke="#64748B" stroke-width="4" stroke-linecap="round">
+      <line x1="330" y1="248" x2="330" y2="332"/><line x1="288" y1="290" x2="372" y2="290"/>
+      <line x1="300" y1="260" x2="360" y2="320"/><line x1="360" y1="260" x2="300" y2="320"/>
+    </g>
+    <circle cx="330" cy="290" r="10" fill="#0284C7"/>
+
+    <!-- pipes -->
+    <rect x="420" y="250" width="130" height="16" rx="8" fill="#0EA5E9"/>
+    <rect x="420" y="292" width="130" height="16" rx="8" fill="#06B6D4"/>
+    <rect x="420" y="334" width="130" height="16" rx="8" fill="#0EA5E9"/>
+    <g fill="#0284C7">
+      <circle cx="440" cy="258" r="6"/><circle cx="500" cy="258" r="6"/>
+      <circle cx="440" cy="300" r="6"/><circle cx="500" cy="300" r="6"/>
+      <circle cx="440" cy="342" r="6"/><circle cx="500" cy="342" r="6"/>
+    </g>
+
+    <!-- status panel -->
+    <rect x="420" y="366" width="130" height="26" rx="13" fill="#0F172A"/>
+    <circle cx="440" cy="379" r="5" fill="#22C55E"/>
+    <text x="452" y="384" fill="#E2E8F0" font-size="11">OPERANDO</text>
+  </g>
+
+  <!-- connected warehouse pipe -->
+  <path d="M400 410 v26" stroke="#94A3B8" stroke-width="14" stroke-linecap="round"/>
+  <path d="M400 436 H160 v-16" stroke="#94A3B8" stroke-width="14" fill="none" stroke-linecap="round"/>
+
+  <!-- cool air -->
+  <path d="M130 330 c -18 16 -22 34 -8 48" stroke="#0EA5E9" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.5"/>
+  <path d="M680 330 c 18 16 22 34 8 48" stroke="#06B6D4" stroke-width="7" stroke-linecap="round" fill="none" opacity="0.5"/>
+
+  <!-- badge -->
+  <g transform="translate(640,50)">
+    <circle cx="46" cy="46" r="46" fill="#0284C7"/>
+    <text x="46" y="50" text-anchor="middle" fill="#fff" font-size="22" font-weight="700">-25°C</text>
+    <text x="46" y="70" text-anchor="middle" fill="#E0F2FE" font-size="11">ULTRA FRÍO</text>
+  </g>
+
+  <g transform="translate(60,70)" stroke="#0284C7" stroke-width="4" stroke-linecap="round">
+    <line x1="30" y1="0" x2="30" y2="60"/><line x1="0" y1="30" x2="60" y2="30"/>
+    <line x1="9" y1="9" x2="51" y2="51"/><line x1="51" y1="9" x2="9" y2="51"/>
+    <path d="M30 0 l-5 6 M30 0 l5 6 M30 60 l-5 -6 M30 60 l5 -6 M0 30 l6 -5 M0 30 l6 5 M60 30 l-6 -5 M60 30 l-6 5" stroke-width="3"/>
+  </g>
+</svg>
