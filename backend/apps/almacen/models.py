@@ -41,6 +41,11 @@ class Producto(models.Model):
         'precio', max_digits=12, decimal_places=2, null=True, blank=True,
         help_text='Vacío = "Consultar precio"',
     )
+    en_oferta = models.BooleanField('en oferta', default=False)
+    precio_oferta = models.DecimalField(
+        'precio de oferta', max_digits=12, decimal_places=2, null=True, blank=True,
+        help_text='Precio promocional mostrado en la vitrina cuando el producto está en oferta.',
+    )
     disponible = models.BooleanField('disponible', default=True)
     stock = models.PositiveIntegerField('stock', default=0)
     destacado = models.BooleanField('destacado', default=False)

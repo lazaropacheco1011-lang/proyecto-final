@@ -49,6 +49,15 @@
     }).format(value);
   }
 
+  /* Precio efectivo del producto: si está en oferta se usa el precio de oferta;
+     el precio normal (precio) siempre se conserva para mostrar tachado. */
+  function productPricing(p) {
+    var original = p.precio != null ? Number(p.precio) : null;
+    var oferta = p.precio_oferta != null ? Number(p.precio_oferta) : null;
+    var enOferta = !!(p.en_oferta && oferta != null);
+    return { enOferta: enOferta, original: original, final: enOferta ? oferta : original };
+  }
+
   async function tryRefresh() {
     var refresh = localStorage.getItem('refri_refresh');
     if (!refresh) return false;
@@ -283,7 +292,7 @@
       cls = 'mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 py-2.5 font-label-md font-bold text-slate-400';
       return '<button type="button" disabled class="' + cls + '"><span class="material-symbols-outlined text-base">' + icon + '</span>' + label + '</button>';
     }
-    if (p.precio == null) {
+    if (productPricing(p).final == null) {
       icon = 'mail'; label = 'Solicitar cotización';
       cls = 'mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border-2 border-primary/25 py-2.5 font-label-md font-bold text-primary transition-all hover:border-primary hover:bg-primary-container';
       return '<button type="button" data-solicitar="' + esc(p.id) + '" class="' + cls + '"><span class="material-symbols-outlined text-base">' + icon + '</span>' + label + '</button>';
@@ -298,7 +307,7 @@
     var stockBtn = esStock
       ? '<button data-stock="' + p.id + '" class="gest-btn gest-btn-primary" title="Actualizar stock"><span class="material-symbols-outlined text-sm">inventory</span> Stock</button>'
       : '';
-    return '<div class="mt-4 grid grid-cols-' + (esStock ? 3 : 2) + ' gap-2 border-t border-outline-variant pt-4">' +
+    return '<div class="mt-4 grid grid-cols-2 gap-2 border-t border-outline-variant pt-4">' +
       stockBtn +
       '<a href="/admin-dashboard/#/almacen/editar/' + p.id + '" class="gest-btn" title="Editar producto"><span class="material-symbols-outlined text-sm">edit</span> Editar</a>' +
       '<a href="/admin-dashboard/#/almacen" class="gest-btn" title="Gestionar en el panel"><span class="material-symbols-outlined text-sm">tune</span> Gestionar</a>' +
@@ -320,17 +329,24 @@
   }
 
   function productCard(p) {
-    var hasPrecio = p.precio != null;
+    var pricing = productPricing(p);
+    var hasPrecio = pricing.final != null;
     var st = stockState(p);
+    var precioHTML = hasPrecio
+      ? (pricing.enOferta
+          ? '<span class="min-w-0 leading-tight">' +
+              '<span class="block text-xs font-semibold text-on-surface-variant line-through">' + moneyDOP(pricing.original) + '</span>' +
+              '<span class="text-xl font-extrabold tracking-tight text-primary">' + moneyDOP(pricing.final) + '</span>' +
+            '</span>'
+          : '<span class="min-w-0 text-xl font-extrabold tracking-tight text-primary">' + moneyDOP(pricing.final) + '</span>')
+      : '<span class="rounded-lg bg-primary-container px-2.5 py-1 text-xs font-bold text-on-primary-container">CONSULTAR PRECIO</span>';
     return '<article class="av-card group flex flex-col overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">' +
       productImage(p) +
       '<div class="flex flex-1 flex-col p-6">' +
         '<h3 data-producto="' + esc(p.id) + '" class="cursor-pointer font-headline-md text-headline-md font-bold text-on-surface transition-colors hover:text-primary">' + esc(p.nombre) + '</h3>' +
         '<p class="mt-2 flex-1 text-sm leading-relaxed text-on-surface-variant">' + esc(p.descripcion) + '</p>' +
         '<div class="mt-4 flex flex-wrap items-center justify-between gap-2">' +
-          (hasPrecio
-            ? '<span class="min-w-0 text-xl font-extrabold tracking-tight text-primary">' + moneyDOP(p.precio) + '</span>'
-            : '<span class="rounded-lg bg-primary-container px-2.5 py-1 text-xs font-bold text-on-primary-container">CONSULTAR PRECIO</span>') +
+          precioHTML +
           '<span class="' + st.cls + ' av-badge"><span class="material-symbols-outlined text-sm">' + st.icon + '</span>' + st.txt + '</span>' +
         '</div>' +
         productAction(p) +
@@ -520,7 +536,8 @@
       }
     }
     var p = productoCache[id];
-    var hasPrecio = p.precio != null;
+    var pricing = productPricing(p);
+    var hasPrecio = pricing.final != null;
     var img = $('#prodImg');
     var fb = $('#prodImgFallback');
     if (p.imagen) {
@@ -536,7 +553,12 @@
     $('#prodCat').textContent = p.categoria_nombre;
     $('#prodName').textContent = p.nombre;
     $('#prodDesc').textContent = p.descripcion;
-    $('#prodPrice').textContent = hasPrecio ? moneyDOP(p.precio) : 'Consultar precio';
+    $('#prodPrice').innerHTML = hasPrecio
+      ? (pricing.enOferta
+          ? '<span class="block text-sm font-semibold text-on-surface-variant line-through">' + moneyDOP(pricing.original) + '</span>' +
+            '<span class="text-3xl font-extrabold tracking-tight text-primary">' + moneyDOP(pricing.final) + '</span>'
+          : moneyDOP(pricing.final))
+      : 'Consultar precio';
     var stockEl = $('#prodStock');
     if (p.agotado) {
       stockEl.innerHTML = '<span class="av-badge av-badge-error"><span class="material-symbols-outlined text-sm">remove_circle</span> Agotado</span><span class="text-on-surface-variant">Sin stock disponible</span>';
@@ -580,9 +602,10 @@
   $('#prodCta').addEventListener('click', function () {
     if (!currentProduct) return;
     var p = currentProduct;
-    if (p.precio == null || p.agotado) return;
+    var pricing = productPricing(p);
+    if (pricing.final == null || p.agotado) return;
     var cant = currentQty();
-    window.Cart.add({ id: p.id, nombre: p.nombre, imagen: p.imagen, precio: p.precio, stock: p.stock }, cant);
+    window.Cart.add({ id: p.id, nombre: p.nombre, imagen: p.imagen, precio: pricing.final, stock: p.stock }, cant);
     toast(cant + ' × ' + p.nombre + ' agregado al carrito.', 'success');
     $('#prodGoCart').classList.remove('hidden');
   });

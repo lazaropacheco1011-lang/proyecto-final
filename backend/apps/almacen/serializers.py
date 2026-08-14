@@ -30,7 +30,8 @@ class ProductoSerializer(serializers.ModelSerializer):
         model = Producto
         fields = [
             'id', 'nombre', 'categoria', 'categoria_nombre', 'descripcion',
-            'imagen', 'precio', 'disponible', 'stock', 'destacado',
+            'imagen', 'precio', 'en_oferta', 'precio_oferta', 'disponible',
+            'stock', 'destacado',
             'agotado', 'created_at', 'updated_at',
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
@@ -48,4 +49,9 @@ class ProductoSerializer(serializers.ModelSerializer):
     def validate_stock(self, value):
         if value < 0:
             raise serializers.ValidationError('El stock no puede ser negativo.')
+        return value
+
+    def validate_precio_oferta(self, value):
+        if value is not None and value < 0:
+            raise serializers.ValidationError('El precio de oferta no puede ser negativo.')
         return value

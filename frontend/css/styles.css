@@ -424,14 +424,25 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
   border-radius: 0.6rem;
   border: 1px solid #e2e8f0;
-  padding: 0.45rem 0.5rem;
-  font-size: 0.72rem;
+  padding: 0.45rem 0.4rem;
+  font-size: 0.7rem;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  min-width: 0;
   color: #475569;
   transition: all 0.15s ease;
+}
+
+.gest-btn .material-symbols-outlined {
+  font-size: 0.8rem;
+  width: 1.2em;
+  flex: none;
+  overflow: hidden;
+  text-align: center;
 }
 
 .gest-btn:hover {
