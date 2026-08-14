@@ -696,7 +696,7 @@
         '<span class="text-xs font-semibold text-on-surface-variant">' + esc(label) + '</span>' +
         '<span class="material-symbols-outlined ' + (colorClass || 'text-primary') + '">' + esc(icon) + '</span>' +
       '</div>' +
-      '<div class="mt-2 text-2xl font-bold tracking-tight text-on-surface">' + value + '</div>' +
+      '<div class="stat-value mt-2 font-bold tracking-tight text-on-surface">' + value + '</div>' +
     '</div>';
   }
 

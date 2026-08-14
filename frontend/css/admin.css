@@ -131,8 +131,15 @@ body {
   border: 1px solid #E2E8F0;
   border-radius: 12px;
   padding: 16px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
   transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.stat-value {
+  font-size: clamp(0.875rem, 3.1vw, 1.5rem);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 .stat-card:hover {
   box-shadow: 0 8px 20px -8px rgba(2, 132, 199, 0.25);
@@ -143,6 +150,7 @@ body {
   background: #ffffff;
   border: 1px solid #E2E8F0;
   border-radius: 12px;
+  min-width: 0;
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
@@ -152,6 +160,7 @@ body {
   align-items: center;
   gap: 10px;
   width: 100%;
+  min-width: 0;
   text-align: left;
   border: 1px solid #E2E8F0;
   border-radius: 10px;
@@ -186,6 +195,8 @@ body {
 }
 .module-card-label {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 13px;
   font-weight: 600;
   line-height: 1.25;
