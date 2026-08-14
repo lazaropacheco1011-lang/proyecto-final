@@ -75,6 +75,10 @@ def reparaciones_page(request):
     return serve_frontend_file(request, 'reparaciones.html')
 
 
+def detalle_servicio_page(request):
+    return serve_frontend_file(request, 'detalle-servicio.html')
+
+
 def paypal_aprobacion_page(request):
     return serve_frontend_file(request, 'paypal-aprobacion.html')
 
@@ -89,6 +93,7 @@ urlpatterns = [
     path('checkout/exito/', confirmacion_page, name='confirmacion'),
     path('mantenimiento/', mantenimiento_page, name='mantenimiento'),
     path('reparaciones/', reparaciones_page, name='reparaciones'),
+    path('servicio/', detalle_servicio_page, name='detalle_servicio'),
     path('css/<path:path>', serve_frontend_file),
     path('js/<path:path>', serve_frontend_file),
     path('assets/<path:path>', serve_frontend_file),
