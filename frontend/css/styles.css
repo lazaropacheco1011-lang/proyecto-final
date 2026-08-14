@@ -138,6 +138,67 @@ body {
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
+/* ---------- Almacén: prevención general de desbordes ---------- */
+/* Reglas de componente que se aplican a TODA la vitrina de almacén:
+   tiles de categoría y tarjetas de producto. Garantizan que ningún
+   título, descripción, etiqueta, precio o botón se salga de su tarjeta,
+   sin importar el largo del nombre (actual o futuro). */
+
+.cat-tile {
+  min-width: 0;
+}
+
+.cat-tile .tile-label,
+.cat-tile .tile-sub {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
+}
+
+.cat-tile .tile-icon {
+  overflow: hidden;
+}
+
+.av-card {
+  min-width: 0;
+}
+
+.av-card h3,
+.av-card p,
+.av-card span,
+.av-card a,
+.av-card button {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.av-card .img-badge {
+  white-space: normal;
+  line-height: 1.35;
+}
+
+/* Modal de producto: evita que nombres, precios o descripciones largas se
+   salgan del modal en celular (misma estrategia que las tarjetas). */
+#modal-producto #prodName,
+#modal-producto #prodDesc,
+#modal-producto #prodPrice,
+#modal-producto #prodCat {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Tarjetas KPI: números y etiquetas largas nunca se salen de la tarjeta. */
+.kpi-value,
+.kpi-label,
+.kpi-hint {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* ---------- Almacén: paginación de la vitrina ---------- */
 .pager {
   display: flex;

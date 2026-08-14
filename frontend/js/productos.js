@@ -267,10 +267,12 @@
       (p.imagen
         ? '<img src="' + esc(p.imagen) + '" alt="' + esc(p.nombre) + '" class="absolute inset-0 h-full w-full object-contain p-7 transition-transform duration-500 group-hover:scale-105" loading="lazy" width="800" height="560" onload="this.previousElementSibling.classList.add(\'hidden\');" onerror="this.onerror=null; this.remove();">'
         : '') +
-      '<span class="absolute left-4 top-4 z-10 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-on-surface shadow-sm backdrop-blur">' + esc(p.categoria_nombre) + '</span>' +
-      (p.destacado
-        ? '<span class="absolute right-4 top-4 z-10 flex items-center gap-1 rounded-full bg-warning px-3 py-1 text-xs font-bold text-white shadow-sm"><span class="material-symbols-outlined text-xs">star</span>Destacado</span>'
-        : '') +
+      '<div class="absolute left-4 right-4 top-4 z-10 flex flex-wrap items-start justify-between gap-2">' +
+        '<span class="img-badge min-w-0 rounded-full bg-white/90 px-3 py-1 text-xs font-bold text-on-surface shadow-sm backdrop-blur">' + esc(p.categoria_nombre) + '</span>' +
+        (p.destacado
+          ? '<span class="flex shrink-0 items-center gap-1 rounded-full bg-warning px-3 py-1 text-xs font-bold text-white shadow-sm"><span class="material-symbols-outlined text-xs">star</span>Destacado</span>'
+          : '') +
+      '</div>' +
       '</div>';
   }
 
@@ -320,14 +322,14 @@
   function productCard(p) {
     var hasPrecio = p.precio != null;
     var st = stockState(p);
-    return '<article class="group flex flex-col overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">' +
+    return '<article class="av-card group flex flex-col overflow-hidden rounded-3xl border border-outline-variant bg-white shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:shadow-xl">' +
       productImage(p) +
       '<div class="flex flex-1 flex-col p-6">' +
         '<h3 data-producto="' + esc(p.id) + '" class="cursor-pointer font-headline-md text-headline-md font-bold text-on-surface transition-colors hover:text-primary">' + esc(p.nombre) + '</h3>' +
-        '<p class="mt-2 flex-1 text-sm leading-relaxed text-on-surface-variant line-clamp-2">' + esc(p.descripcion) + '</p>' +
+        '<p class="mt-2 flex-1 text-sm leading-relaxed text-on-surface-variant">' + esc(p.descripcion) + '</p>' +
         '<div class="mt-4 flex flex-wrap items-center justify-between gap-2">' +
           (hasPrecio
-            ? '<span class="text-xl font-extrabold tracking-tight text-primary">' + moneyDOP(p.precio) + '</span>'
+            ? '<span class="min-w-0 text-xl font-extrabold tracking-tight text-primary">' + moneyDOP(p.precio) + '</span>'
             : '<span class="rounded-lg bg-primary-container px-2.5 py-1 text-xs font-bold text-on-primary-container">CONSULTAR PRECIO</span>') +
           '<span class="' + st.cls + ' av-badge"><span class="material-symbols-outlined text-sm">' + st.icon + '</span>' + st.txt + '</span>' +
         '</div>' +
@@ -359,9 +361,9 @@
       label = d.count + ' producto' + (d.count === 1 ? '' : 's') + ' disponibles';
     }
     var html = '<div class="mb-8 flex flex-wrap items-end justify-between gap-3">' +
-      '<div><span class="font-label-md font-bold text-primary">VITRINA</span>' +
-      '<h2 class="mt-1 font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">' + esc(title) + '</h2>' +
-      '<p class="text-sm text-on-surface-variant">' + esc(label) + '</p></div>';
+      '<div class="min-w-0"><span class="font-label-md font-bold text-primary">VITRINA</span>' +
+      '<h2 class="mt-1 break-words font-headline-lg text-headline-lg font-extrabold tracking-tight text-on-surface">' + esc(title) + '</h2>' +
+      '<p class="break-words text-sm text-on-surface-variant">' + esc(label) + '</p></div>';
     if (state.search || state.cat) {
       html += '<button data-clear class="inline-flex items-center gap-2 rounded-xl border border-outline-variant px-4 py-2.5 font-label-md font-bold text-on-surface transition-colors hover:bg-surface-dim">' +
         '<span class="material-symbols-outlined text-sm">close</span> Limpiar</button>';
@@ -412,14 +414,14 @@
 
   function tileHTML(id, icono, nombre, count, desc, active) {
     return '<button type="button" data-cat="' + esc(id) + '" class="cat-tile' + (active ? ' active' : '') + '" title="' + esc(nombre) + '">' +
-      '<span class="flex w-full items-center justify-between gap-2">' +
-        '<span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-container text-on-primary-container">' +
+      '<span class="flex w-full min-w-0 items-center justify-between gap-2">' +
+        '<span class="tile-icon flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary-container text-on-primary-container">' +
           '<span class="material-symbols-outlined">' + esc(icono) + '</span></span>' +
-        '<span class="rounded-full bg-surface-dim px-2.5 py-1 text-xs font-bold text-on-surface-variant">' + count + '</span>' +
+        '<span class="shrink-0 rounded-full bg-surface-dim px-2.5 py-1 text-xs font-bold text-on-surface-variant">' + count + '</span>' +
       '</span>' +
       '<span class="min-w-0">' +
-        '<span class="block truncate text-sm font-bold text-on-surface">' + esc(nombre) + '</span>' +
-        (desc ? '<span class="mt-0.5 block truncate text-xs text-on-surface-variant">' + esc(desc) + '</span>' : '') +
+        '<span class="tile-label block text-sm font-bold text-on-surface">' + esc(nombre) + '</span>' +
+        (desc ? '<span class="tile-sub mt-0.5 block text-xs text-on-surface-variant">' + esc(desc) + '</span>' : '') +
       '</span>' +
     '</button>';
   }
