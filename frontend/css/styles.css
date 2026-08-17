@@ -44,7 +44,7 @@ body {
 [class*="rounded-xl"][class*="from-primary"][class*="to-secondary"] > .material-symbols-outlined,
 [class*="rounded-2xl"][class*="from-primary"][class*="to-secondary"] > .material-symbols-outlined,
 [class*="rounded-xl"][class*="bg-white/15"][class*="ring-white/25"] > .material-symbols-outlined {
-  animation: logo-spin 4s linear infinite;
+  animation: logo-spin 5s linear infinite;
 }
 
 /* ---------- Identidad visual RefriMaster (paleta oficial sky/cyan) ---------- */
@@ -519,7 +519,14 @@ body {
   background: #25d366;
   color: #fff;
   box-shadow: 0 10px 25px -6px rgba(37, 211, 102, 0.6);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  opacity: 1;
+  transform: translateY(0);
+  transition: transform 0.4s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.4s ease;
+}
+.wa-float--hidden {
+  opacity: 0;
+  transform: translateY(12px);
+  pointer-events: none;
 }
 
 .wa-float:hover {

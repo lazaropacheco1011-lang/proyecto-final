@@ -55,6 +55,17 @@
         document.body.appendChild(buildButton());
       });
     }
+
+    var scrollTimer = null;
+    window.addEventListener('scroll', function () {
+      var btn = document.querySelector('.wa-float');
+      if (!btn) return;
+      btn.classList.add('wa-float--hidden');
+      clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(function () {
+        btn.classList.remove('wa-float--hidden');
+      }, 300);
+    }, { passive: true });
   }
 
   init();
