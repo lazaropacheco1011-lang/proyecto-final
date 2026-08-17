@@ -35,6 +35,18 @@ body {
   vertical-align: middle;
 }
 
+/* ---------- Logo — rotación del símbolo interno ---------- */
+@keyframes logo-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+[class*="rounded-xl"][class*="from-primary"][class*="to-secondary"] > .material-symbols-outlined,
+[class*="rounded-2xl"][class*="from-primary"][class*="to-secondary"] > .material-symbols-outlined,
+[class*="rounded-xl"][class*="bg-white/15"][class*="ring-white/25"] > .material-symbols-outlined {
+  animation: logo-spin 4s linear infinite;
+}
+
 /* ---------- Identidad visual RefriMaster (paleta oficial sky/cyan) ---------- */
 .hero-gradient {
   background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
