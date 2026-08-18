@@ -18,6 +18,7 @@ CATEGORIAS = [
     ('Capacitores', 'Capacitores de arranque y marcha para motores', 'bolt'),
     ('Controles y termostatos', 'Controles de temperatura y termostatos digitales', 'tune'),
     ('Filtros', 'Filtros deshidratadores y de aire', 'filter_alt'),
+    ('Productos de limpieza de aire', 'Limpiadores, desinfectantes y sprays para sistemas de aire', 'cleaning_services'),
     ('Motores y ventiladores', 'Motores y ventiladores para condensación y evaporación', 'toys_fan'),
     ('Materiales de instalación', 'Abrazaderas, aislantes, soldadura y accesorios de línea', 'handyman'),
     ('Herramientas de refrigeración', 'Herramientas profesionales para instalación y servicio', 'handyman'),
@@ -89,6 +90,12 @@ PRODUCTOS = {
         ('Filtro deshidratador 3/8"', 'UNIDAD',
          'Filtro deshidratador bi-flow para sistemas inverter.', 32000, 90),
     ],
+    'Productos de limpieza de aire': [
+        ('Limpiador de evaporadores spray 500 ml', 'UNIDAD',
+         'Spray limpiador para aletas de evaporadores y condensadores.', 35000, 60),
+        ('Desinfectante de conductos aerosol', 'UNIDAD',
+         'Aerosol desinfectante para conductos de aire acondicionado.', 42000, 45),
+    ],
     'Motores y ventiladores': [
         ('Motor ventilador de condensación 1/4 HP', 'UNIDAD',
          'Motor con hélice de 3 aspas para condensadoras.', 420000, 14),
@@ -126,6 +133,7 @@ SLUGS = {
     'Capacitores': 'capacitores',
     'Controles y termostatos': 'controles-termostatos',
     'Filtros': 'filtros',
+    'Productos de limpieza de aire': 'limpieza-aire',
     'Motores y ventiladores': 'motores-ventiladores',
     'Materiales de instalación': 'materiales-instalacion',
     'Herramientas de refrigeración': 'herramientas',
@@ -170,17 +178,23 @@ class Command(BaseCommand):
             (FRONTEND_ASSETS / f'{slug}.svg').write_text(_svg(slug, nombre), encoding='utf-8')
 
             for i, (pnombre, unidad, pdesc, precio, stock) in enumerate(PRODUCTOS.get(nombre, [])):
+                defaults = {
+                    'categoria': cat,
+                    'descripcion': pdesc,
+                    'imagen': imagen,
+                    'precio': precio,
+                    'disponible': stock > 0,
+                    'stock': stock,
+                    'destacado': i == 0,
+                }
+
+                existente = Producto.objects.filter(nombre=pnombre).first()
+                if existente and existente.imagen:
+                    del defaults['imagen']
+
                 Producto.objects.update_or_create(
                     nombre=pnombre,
-                    defaults={
-                        'categoria': cat,
-                        'descripcion': pdesc,
-                        'imagen': imagen,
-                        'precio': precio,
-                        'disponible': stock > 0,
-                        'stock': stock,
-                        'destacado': i == 0,
-                    },
+                    defaults=defaults,
                 )
 
         self.stdout.write(self.style.SUCCESS(f'Vitrina de Almacén lista: {Categoria.objects.count()} categorías, {Producto.objects.count()} productos.'))
