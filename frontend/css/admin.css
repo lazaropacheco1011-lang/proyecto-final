@@ -342,6 +342,186 @@ body {
   margin-left: auto;
 }
 
+/* ---------- Sidebar toggle ---------- */
+.sidebar-toggle-btn {
+  display: none;
+}
+.sidebar-close-btn {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .sidebar-toggle-btn {
+    display: flex;
+  }
+  .sidebar-close-btn {
+    display: none !important;
+  }
+}
+@media (max-width: 1023px) {
+  .sidebar-close-btn {
+    display: flex;
+  }
+  .sidebar-toggle-btn {
+    display: none !important;
+  }
+}
+
+/* ---------- Sidebar nav groups ---------- */
+.nav-group {
+  margin-bottom: 2px;
+}
+.nav-group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #94A3B8;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.nav-group-label:hover {
+  background: #F1F5F9;
+  color: #64748B;
+}
+.nav-group-label .material-symbols-outlined {
+  font-size: 16px;
+}
+.nav-group-arrow {
+  margin-left: auto;
+  font-size: 18px !important;
+  transition: transform 0.2s ease;
+}
+.nav-group-label[aria-expanded="false"] .nav-group-arrow {
+  transform: rotate(0deg);
+}
+.nav-group-label[aria-expanded="true"] .nav-group-arrow {
+  transform: rotate(180deg);
+}
+.nav-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  height: auto;
+  overflow: hidden;
+  transition: height 0.25s ease, opacity 0.15s ease;
+  opacity: 1;
+}
+.nav-group-items.collapsed {
+  height: 0;
+  gap: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------- Sidebar collapsed (desktop) ---------- */
+@media (min-width: 1024px) {
+  .sidebar-closed {
+    width: 72px !important;
+    min-width: 72px !important;
+  }
+  .sidebar-closed .sidebar-brand,
+  .sidebar-closed .sidebar-user-info,
+  .sidebar-closed .sidebar-footer-actions,
+  .sidebar-closed .nav-group-label,
+  .sidebar-closed #sidebarClose {
+    display: none !important;
+  }
+  .sidebar-closed .sidebar-header {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .sidebar-closed .sidebar-header > *:not(.sidebar-toggle-btn):not(:first-child) {
+    display: none;
+  }
+  .sidebar-closed .sidebar-header .sidebar-toggle-btn {
+    display: flex !important;
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: white;
+    border: 1px solid #E2E8F0;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    z-index: 50;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .sidebar-closed .sidebar-nav {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 12px;
+    align-items: center;
+  }
+  .sidebar-closed .nav-item {
+    justify-content: center;
+    padding: 10px;
+    position: relative;
+  }
+  .sidebar-closed .nav-item > span:last-child {
+    display: none;
+  }
+  .sidebar-closed .nav-item .badge {
+    display: none;
+  }
+  .sidebar-closed .sidebar-user {
+    justify-content: center;
+    padding: 0;
+  }
+  .sidebar-closed .sidebar-footer {
+    padding: 10px 8px;
+  }
+
+  /* Tooltip for collapsed nav items */
+  .sidebar-closed .nav-item[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    background: #1E293B;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 100;
+  }
+  .sidebar-closed .nav-item[data-tooltip]:hover::after {
+    opacity: 1;
+  }
+}
+
+/* Main content transition when sidebar toggles */
+#mainContent {
+  transition: padding-left 0.2s ease;
+}
+
+/* ---------- Scrollbar containment ---------- */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 2px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 /* ---------- Modal ---------- */
 .modal-backdrop {
   position: fixed;

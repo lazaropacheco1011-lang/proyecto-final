@@ -126,9 +126,10 @@ urlpatterns = [
 admin_enabled = settings.DEBUG or env_bool('DJANGO_ADMIN_ENABLED', False)
 if admin_enabled:
     urlpatterns += [
-        path('admin/', admin.site.urls),
-        path('administrador', RedirectView.as_view(url='/admin/', permanent=False), name='administrador_redirect'),
-        path('administrador/', RedirectView.as_view(url='/admin/', permanent=False), name='administrador_redirect_slash'),
+        path('django-admin/', admin.site.urls),
+        path('admin/', RedirectView.as_view(url='/admin-dashboard/', permanent=False), name='admin_redirect'),
+        path('administrador', RedirectView.as_view(url='/admin-dashboard/', permanent=False), name='administrador_redirect'),
+        path('administrador/', RedirectView.as_view(url='/admin-dashboard/', permanent=False), name='administrador_redirect_slash'),
         path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
         path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     ]

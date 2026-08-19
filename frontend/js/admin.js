@@ -4639,14 +4639,80 @@
     perfil: { title: 'Mi perfil', icon: 'person', subtitle: 'Foto de perfil y datos personales', roles: ['administrador', 'supervisor', 'tecnico', 'almacen', 'cliente'] },
   };
 
+  var SIDEBAR_GROUPS = [
+    { label: 'Principal', icon: 'home', keys: ['dashboard', 'clientes', 'tecnicos', 'mis_equipos'], collapsed: false },
+    { label: 'Operaciones', icon: 'engineering', keys: ['equipos', 'solicitudes', 'instalaciones', 'servicios', 'agenda'], collapsed: false },
+    { label: 'Mantenimiento', icon: 'build', keys: ['mantenimientos', 'visitas', 'evaluaciones'], collapsed: false },
+    { label: 'Ventas', icon: 'point_of_sale', keys: ['cotizaciones', 'pagos', 'tienda'], collapsed: false },
+    { label: 'Almacén', icon: 'warehouse', keys: ['inventario', 'almacen'], collapsed: false },
+    { label: 'Sistema', icon: 'settings', keys: ['reportes', 'usuarios', 'perfil'], collapsed: false },
+  ];
+
   function buildNav() {
-    $('#navList').innerHTML = Object.keys(SECTIONS).map(function (key) {
-      var s = SECTIONS[key];
-      if (s.roles.indexOf(S.user.role) < 0) return '';
-      return '<button class="nav-item" data-nav="' + key + '">' +
-             '<span class="material-symbols-outlined">' + s.icon + '</span>' +
-             '<span>' + s.title + '</span></button>';
-    }).join('');
+    var role = S.user.role;
+    var html = '';
+    SIDEBAR_GROUPS.forEach(function (group, idx) {
+      var items = [];
+      group.keys.forEach(function (key) {
+        var s = SECTIONS[key];
+        if (!s || s.roles.indexOf(role) < 0) return;
+        items.push(
+          '<button class="nav-item" data-nav="' + key + '" data-tooltip="' + esc(s.title) + '">' +
+          '<span class="material-symbols-outlined">' + s.icon + '</span>' +
+          '<span>' + esc(s.title) + '</span></button>'
+        );
+      });
+      if (items.length === 0) return;
+      var expanded = group.collapsed !== true;
+      html += '<div class="nav-group" data-group="' + idx + '">' +
+        '<button class="nav-group-label" aria-expanded="' + expanded + '">' +
+        '<span class="material-symbols-outlined">' + group.icon + '</span>' +
+        '<span>' + group.label + '</span>' +
+        '<span class="material-symbols-outlined nav-group-arrow">expand_more</span></button>' +
+        '<div class="nav-group-items' + (expanded ? '' : ' collapsed') + '">' + items.join('') + '</div></div>';
+    });
+    $('#navList').innerHTML = html;
+  }
+
+  function initGroupToggles() {
+    try {
+      var saved = JSON.parse(localStorage.getItem('sidebar_groups') || '{}');
+      SIDEBAR_GROUPS.forEach(function (g, i) {
+        if (saved[i] !== undefined) g.collapsed = !!saved[i];
+      });
+    } catch (e) {}
+    function toggleGroup(label) {
+      var group = label.closest('.nav-group');
+      if (!group) return;
+      var idx = parseInt(group.dataset.group, 10);
+      var items = group.querySelector('.nav-group-items');
+      if (!items) return;
+      var willCollapse = label.getAttribute('aria-expanded') !== 'false';
+      label.setAttribute('aria-expanded', String(!willCollapse));
+      SIDEBAR_GROUPS[idx].collapsed = willCollapse;
+      if (willCollapse) {
+        items.style.height = items.scrollHeight + 'px';
+        items.offsetHeight;
+        items.classList.add('collapsed');
+        items.style.height = '0';
+      } else {
+        items.classList.remove('collapsed');
+        items.style.height = items.scrollHeight + 'px';
+        items.addEventListener('transitionend', function handler() {
+          items.style.height = '';
+          items.removeEventListener('transitionend', handler);
+        });
+      }
+      try {
+        var state = {};
+        SIDEBAR_GROUPS.forEach(function (g, i) { state[i] = g.collapsed; });
+        localStorage.setItem('sidebar_groups', JSON.stringify(state));
+      } catch (e) {}
+    }
+    $('#navList').addEventListener('click', function (e) {
+      var label = e.target.closest('.nav-group-label');
+      if (label) toggleGroup(label);
+    });
   }
 
   function closeSidebar() {
@@ -4659,6 +4725,25 @@
     $('#sidebar').classList.remove('-translate-x-full');
     $('#sidebar').classList.add('translate-x-0');
     $('#sidebarOverlay').classList.remove('hidden');
+  }
+
+  function toggleSidebar() {
+    var sidebar = $('#sidebar');
+    var main = $('#mainContent');
+    var toggleIcon = sidebar.querySelector('#sidebarToggle .material-symbols-outlined');
+    if (sidebar.classList.contains('sidebar-closed')) {
+      sidebar.classList.remove('sidebar-closed');
+      main.classList.remove('lg:pl-[72px]');
+      main.classList.add('lg:pl-64');
+      if (toggleIcon) toggleIcon.textContent = 'menu';
+      try { localStorage.setItem('sidebar_closed', '0'); } catch (e) {}
+    } else {
+      sidebar.classList.add('sidebar-closed');
+      main.classList.remove('lg:pl-64');
+      main.classList.add('lg:pl-[72px]');
+      if (toggleIcon) toggleIcon.textContent = 'menu_open';
+      try { localStorage.setItem('sidebar_closed', '1'); } catch (e) {}
+    }
   }
 
   function firstAllowedSection() {
@@ -4714,6 +4799,13 @@
 
   $('#menuBtn').addEventListener('click', openSidebar);
   $('#sidebarClose').addEventListener('click', closeSidebar);
+  $('#sidebarToggle').addEventListener('click', function () {
+    if (window.innerWidth >= 1024) {
+      toggleSidebar();
+    } else {
+      closeSidebar();
+    }
+  });
   $('#sidebarOverlay').addEventListener('click', closeSidebar);
   $('#userCard').addEventListener('click', function () { go('perfil'); });
   $('#refreshBtn').addEventListener('click', function () { reloadCurrent(); });
@@ -4812,7 +4904,21 @@
     }
     renderUser();
     buildNav();
+    initGroupToggles();
+    $$('#navList .nav-group-items.collapsed').forEach(function (el) {
+      el.style.height = '0';
+    });
     setupNotificaciones();
+    try {
+      if (localStorage.getItem('sidebar_closed') === '1' && window.innerWidth >= 1024) {
+        var sb = $('#sidebar');
+        sb.classList.add('sidebar-closed');
+        $('#mainContent').classList.remove('lg:pl-64');
+        $('#mainContent').classList.add('lg:pl-[72px]');
+        var ti = sb.querySelector('#sidebarToggle .material-symbols-outlined');
+        if (ti) ti.textContent = 'menu_open';
+      }
+    } catch (e) {}
     $('#bootScreen').classList.add('hidden');
     $('#app').classList.remove('hidden');
     var hash = location.hash || '';
