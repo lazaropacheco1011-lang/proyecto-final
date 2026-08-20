@@ -5,7 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
-from apps.core.permissions import CLIENTE, TECNICO, has_role, is_admin
+from apps.core.permissions import CLIENTE, SUPERVISOR, TECNICO, get_supervisor_tecnico_ids, has_role, is_admin, is_supervisor
 from apps.core.services import log_state_change, register_audit
 from apps.instalaciones.models import Instalacion, InstalacionEstadoLog
 from apps.instalaciones.serializers import (
@@ -64,6 +64,11 @@ class InstalacionViewSet(viewsets.ModelViewSet):
             return qs.filter(cliente__user=user)
         if has_role(user, TECNICO):
             return qs.filter(tecnico__user=user)
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if tecnicos_ids:
+                return qs.filter(tecnico__user_id__in=tecnicos_ids)
+            return qs.none()
         return qs
 
     def check_permissions(self, request):
@@ -71,6 +76,10 @@ class InstalacionViewSet(viewsets.ModelViewSet):
         if request.method not in SAFE_METHODS and has_role(request.user, CLIENTE):
             raise PermissionDenied(
                 'Los clientes no pueden crear ni modificar instalaciones (RN-08).'
+            )
+        if request.method == 'POST' and has_role(request.user, TECNICO):
+            raise PermissionDenied(
+                'Los técnicos no pueden crear instalaciones.'
             )
 
     def get_serializer_context(self):
@@ -98,7 +107,14 @@ class InstalacionViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        if not is_admin(self.request.user):
+        user = self.request.user
+        if has_role(user, TECNICO):
+            raise PermissionDenied('Los técnicos no pueden eliminar instalaciones.')
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if not instance.tecnico or instance.tecnico.user_id not in tecnicos_ids:
+                raise PermissionDenied('Solo puedes eliminar instalaciones asignadas a tus técnicos.')
+        elif not is_admin(user):
             raise PermissionDenied('Solo el administrador puede eliminar instalaciones (RN-08).')
         register_audit(self.request.user, 'eliminar', instance, model_name='instalaciones.instalacion')
         instance.delete()

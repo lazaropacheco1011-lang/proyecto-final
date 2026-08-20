@@ -5,6 +5,8 @@ from django.db import models
 from apps.almacen.models import Producto
 from apps.clientes.models import Cliente
 
+User = settings.AUTH_USER_MODEL
+
 
 class Orden(models.Model):
     """Orden de compra creada desde la tienda pública (checkout)."""
@@ -42,6 +44,18 @@ class Orden(models.Model):
     ciudad_entrega = models.CharField('ciudad', max_length=100)
     referencia_entrega = models.CharField('referencia de entrega', max_length=255, blank=True)
     notas = models.TextField('notas', blank=True)
+
+    documento = models.CharField('documento / RNC', max_length=30, blank=True)
+    provincia = models.CharField('provincia', max_length=100, blank=True)
+    sector = models.CharField('sector', max_length=100, blank=True)
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='ordenes_tienda',
+        verbose_name='usuario',
+    )
 
     subtotal = models.DecimalField('subtotal', max_digits=14, decimal_places=2, default=0)
     envio = models.DecimalField('envío', max_digits=14, decimal_places=2, default=0)

@@ -44,6 +44,24 @@ class MaterialUtilizadoSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'subtotal']
 
+
+class MaterialUtilizadoSerializerSinCostos(serializers.ModelSerializer):
+    """Sin campos de precio para técnicos."""
+    material_nombre = serializers.CharField(source='material.nombre', read_only=True)
+    material_codigo = serializers.CharField(source='material.codigo', read_only=True)
+    material_unidad = serializers.CharField(source='material.get_unidad_medida_display', read_only=True)
+    stock_actual = serializers.DecimalField(
+        source='material.cantidad_disponible', read_only=True, max_digits=12, decimal_places=2
+    )
+
+    class Meta:
+        model = MaterialUtilizado
+        fields = [
+            'id', 'orden', 'material', 'material_nombre', 'material_codigo',
+            'material_unidad', 'cantidad', 'stock_actual', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
     def validate(self, attrs):
         material = attrs.get('material')
         cantidad = attrs.get('cantidad')
@@ -132,13 +150,11 @@ class OrdenServicioSerializer(serializers.ModelSerializer):
     tecnico_nombre = serializers.CharField(read_only=True)
     tipo_servicio_display = serializers.CharField(source='get_tipo_servicio_display', read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
-    materiales_utilizados = MaterialUtilizadoSerializer(many=True, read_only=True)
+    materiales_utilizados = serializers.SerializerMethodField()
     cliente = serializers.PrimaryKeyRelatedField(
         queryset=Cliente.objects.all(), required=False, allow_null=True
     )
-    total_materiales = serializers.DecimalField(
-        source='costo_materiales', read_only=True, max_digits=12, decimal_places=2
-    )
+    total_materiales = serializers.SerializerMethodField()
     total_evidencias = serializers.SerializerMethodField()
     ultimo_cambio_estado = serializers.SerializerMethodField()
 
@@ -160,6 +176,23 @@ class OrdenServicioSerializer(serializers.ModelSerializer):
 
     def get_total_evidencias(self, obj):
         return obj.evidencias.count()
+
+    def _is_tecnico(self):
+        request = self.context.get('request')
+        if request:
+            return has_role(request.user, 'tecnico')
+        return False
+
+    def get_materiales_utilizados(self, obj):
+        qs = obj.materiales_utilizados.select_related('material')
+        if self._is_tecnico():
+            return MaterialUtilizadoSerializerSinCostos(qs, many=True).data
+        return MaterialUtilizadoSerializer(qs, many=True).data
+
+    def get_total_materiales(self, obj):
+        if self._is_tecnico():
+            return None
+        return round(sum(float(m.subtotal) for m in obj.materiales_utilizados.all()), 2)
 
     def get_ultimo_cambio_estado(self, obj):
         log = obj.historial.first()

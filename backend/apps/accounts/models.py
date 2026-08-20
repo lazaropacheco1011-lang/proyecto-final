@@ -52,6 +52,27 @@ class User(AbstractUser):
         return self.get_role_display()
 
 
+class Supervisor(models.Model):
+    """Perfil extendido del supervisor — vincula supervisor con sus técnicos."""
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='perfil_supervisor',
+        verbose_name='usuario',
+    )
+    telefono = models.CharField('teléfono', max_length=20, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Supervisor'
+        verbose_name_plural = 'Supervisores'
+        ordering = ['user__first_name']
+
+    def __str__(self):
+        return f'{self.user.get_full_name() or self.user.username} (Supervisor)'
+
+
 class Tecnico(models.Model):
     """Perfil extendido del técnico (RF-09)."""
     user = models.OneToOneField(
@@ -59,6 +80,14 @@ class Tecnico(models.Model):
         on_delete=models.CASCADE,
         related_name='perfil_tecnico',
         verbose_name='usuario',
+    )
+    supervisor = models.ForeignKey(
+        Supervisor,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tecnicos',
+        verbose_name='supervisor',
     )
     especialidad = models.CharField('especialidad', max_length=150, blank=True)
     telefono = models.CharField('teléfono', max_length=20, blank=True)

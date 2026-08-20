@@ -10,6 +10,7 @@ from apps.materiales.models import Material, MovimientoInventario
 from apps.materiales.serializers import (
     EntradaInventarioSerializer,
     MaterialSerializer,
+    MaterialSerializerSinPrecio,
     MovimientoInventarioSerializer,
 )
 
@@ -28,6 +29,11 @@ class MaterialViewSet(viewsets.ModelViewSet):
         if self.action in ('create', 'destroy', 'update', 'partial_update'):
             return [perm() for perm in (IsAdminOrAlmacen,)]
         return [perm() for perm in (CanViewMateriales,)]
+
+    def get_serializer_class(self):
+        if has_role(self.request.user, 'tecnico'):
+            return MaterialSerializerSinPrecio
+        return MaterialSerializer
 
     def get_queryset(self):
         qs = super().get_queryset()

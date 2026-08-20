@@ -1,7 +1,8 @@
 from decimal import Decimal
 
-from django.db.models import Sum, Value
+from django.db.models import Q, Sum, Value
 from django.db.models.functions import Coalesce
+from django.http import HttpResponse
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
@@ -12,9 +13,11 @@ from apps.core.permissions import (
     SUPERVISOR,
     TECNICO,
     CLIENTE,
+    get_supervisor_tecnico_ids,
     has_role,
     is_admin,
     is_staff_role,
+    is_supervisor,
 )
 from apps.core.services import log_state_change, register_audit
 from apps.materiales.services import reponer_inventario
@@ -55,9 +58,19 @@ class OrdenServicioViewSet(viewsets.ModelViewSet):
             return qs.filter(cliente__user=user)
         if has_role(user, TECNICO):
             return qs.filter(tecnico__user=user)
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if tecnicos_ids:
+                return qs.filter(
+                    Q(tecnico__user_id__in=tecnicos_ids) | Q(tecnico__isnull=True)
+                )
+            return qs
         return qs
 
     def perform_create(self, serializer):
+        user = self.request.user
+        if has_role(user, TECNICO):
+            raise PermissionDenied('Los técnicos no pueden crear órdenes de servicio.')
         orden = serializer.save()
         EstadoOrdenLog.objects.create(
             orden=orden,
@@ -88,7 +101,14 @@ class OrdenServicioViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        if not is_admin(self.request.user):
+        user = self.request.user
+        if has_role(user, TECNICO):
+            raise PermissionDenied('Los técnicos no pueden eliminar órdenes de servicio.')
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if not instance.tecnico or instance.tecnico.user_id not in tecnicos_ids:
+                raise PermissionDenied('Solo puedes eliminar órdenes asignadas a tus técnicos.')
+        elif not is_admin(user):
             raise PermissionDenied('Solo el administrador puede eliminar órdenes (RN-08).')
         register_audit(self.request.user, 'eliminar', instance, model_name='servicios.ordenservicio')
         instance.delete()
@@ -165,6 +185,83 @@ class OrdenServicioViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         return Response(serializer.data)
 
+    @action(detail=True, methods=['get'])
+    def pdf(self, request, pk=None):
+        """Genera PDF operativo de una orden (sin datos financieros)."""
+        orden = self.get_object()
+        if has_role(request.user, TECNICO):
+            if not orden.tecnico or orden.tecnico.user_id != request.user.id:
+                raise PermissionDenied('Esta orden no está asignada a ti.')
+        from reportlab.lib import colors
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        import io
+
+        buf = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buf, pagesize=letter,
+            rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40,
+        )
+        estilos = getSampleStyleSheet()
+        elems = []
+        elems.append(Paragraph(f'Orden de Servicio: {orden.numero}', estilos['Title']))
+        elems.append(Spacer(1, 12))
+
+        def _row(label, value):
+            return [f'<b>{label}</b>', str(value or '-')]
+
+        data = [
+            _row('Código', orden.numero),
+            _row('Fecha', str(orden.fecha)),
+            _row('Estado', orden.get_estado_display()),
+            _row('Tipo de servicio', orden.get_tipo_servicio_display()),
+            _row('Cliente', str(orden.cliente)),
+            _row('Equipo', orden.equipo_nombre or '-'),
+            _row('Técnico', orden.tecnico_nombre or '-'),
+            _row('Problema reportado', orden.problema_reportado or '-'),
+            _row('Diagnóstico', orden.diagnostico or '-'),
+            _row('Trabajo realizado', orden.trabajo_realizado or '-'),
+            _row('Observaciones', orden.observaciones or '-'),
+        ]
+        if orden.fecha_asignacion:
+            data.append(_row('Fecha de asignación', str(orden.fecha_asignacion)))
+        if orden.fecha_finalizacion:
+            data.append(_row('Fecha de finalización', str(orden.fecha_finalizacion)))
+
+        materiales = list(orden.materiales_utilizados.select_related('material').all())
+        if materiales:
+            elems.append(Paragraph('Materiales necesarios:', estilos['Heading2']))
+            elems.append(Spacer(1, 6))
+            mat_data = [['Material', 'Código', 'Cantidad']]
+            for m in materiales:
+                mat_data.append([m.material.nombre, m.material.codigo, str(m.cantidad)])
+            mat_table = Table(mat_data, repeatRows=1)
+            mat_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0284C7')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F1F5F9')]),
+            ]))
+            elems.append(mat_table)
+            elems.append(Spacer(1, 12))
+
+        tabla = Table(data, colWidths=[150, 350])
+        tabla.setStyle(TableStyle([
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#F1F5F9')]),
+        ]))
+        elems.append(tabla)
+        doc.build(elems)
+        buf.seek(0)
+        response = HttpResponse(buf.read(), content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename=orden_{orden.numero}.pdf'
+        return response
+
 
 class VisitaTecnicaViewSet(viewsets.ModelViewSet):
     """Visitas técnicas al domicilio del cliente (RF-11)."""
@@ -184,16 +281,23 @@ class VisitaTecnicaViewSet(viewsets.ModelViewSet):
             return qs.filter(cliente__user=user)
         if has_role(user, TECNICO):
             return qs.filter(tecnico__user=user)
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if tecnicos_ids:
+                return qs.filter(tecnico__user_id__in=tecnicos_ids)
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):
-        if not is_staff_role(self.request.user):
+        user = self.request.user
+        if not is_staff_role(user):
             raise PermissionDenied('Solo el personal interno puede registrar visitas técnicas.')
         visita = serializer.save()
         register_audit(self.request.user, 'crear', visita, model_name='servicios.visitatecnica')
 
     def perform_update(self, serializer):
-        if not is_staff_role(self.request.user):
+        user = self.request.user
+        if not is_staff_role(user):
             raise PermissionDenied('Solo el personal interno puede modificar visitas técnicas.')
         visita = serializer.save()
         register_audit(
@@ -203,7 +307,14 @@ class VisitaTecnicaViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        if not is_admin(self.request.user):
+        user = self.request.user
+        if has_role(user, TECNICO):
+            raise PermissionDenied('Los técnicos no pueden eliminar visitas técnicas.')
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if not instance.tecnico or instance.tecnico.user_id not in tecnicos_ids:
+                raise PermissionDenied('Solo puedes eliminar visitas asignadas a tus técnicos.')
+        elif not is_admin(user):
             raise PermissionDenied('Solo el administrador puede eliminar visitas (RN-08).')
         register_audit(self.request.user, 'eliminar', instance, model_name='servicios.visitatecnica')
         instance.delete()
@@ -231,7 +342,10 @@ class MaterialUtilizadoViewSet(viewsets.ModelViewSet):
         register_audit(self.request.user, 'actualizar', uso, model_name='servicios.materialutilizado')
 
     def perform_destroy(self, instance):
-        if not is_admin(self.request.user):
+        user = self.request.user
+        if has_role(user, TECNICO):
+            raise PermissionDenied('Los técnicos no pueden eliminar ítems de materiales.')
+        if not is_admin(user):
             raise PermissionDenied('Solo el administrador puede eliminar ítems de materiales (RN-08).')
         reponer_inventario(
             instance.material, instance.cantidad,
@@ -245,7 +359,14 @@ class MaterialUtilizadoViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         user = self.request.user
         if has_role(user, CLIENTE):
-            return qs.filter(orden__cliente__user=user)
+            return qs.filter(cliente__user=user)
         if has_role(user, TECNICO):
-            return qs.filter(orden__tecnico__user=user)
+            return qs.filter(tecnico__user=user)
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if tecnicos_ids:
+                return qs.filter(
+                    Q(tecnico__user_id__in=tecnicos_ids) | Q(tecnico__isnull=True)
+                )
+            return qs
         return qs

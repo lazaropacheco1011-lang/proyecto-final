@@ -34,12 +34,21 @@ def _datos_cliente(payload):
     telefono = str(payload.get('telefono') or '').strip()
     direccion = str(payload.get('direccion') or '').strip()
     ciudad = str(payload.get('ciudad') or '').strip()
+    documento = str(payload.get('documento') or '').strip()
+    provincia = str(payload.get('provincia') or '').strip()
+    sector = str(payload.get('sector') or '').strip()
     if not nombre:
         raise ValidationError('El nombre del cliente es obligatorio.')
     if not email or '@' not in email:
         raise ValidationError('Correo electrónico inválido.')
     if not telefono:
         raise ValidationError('El teléfono es obligatorio.')
+    if not documento:
+        raise ValidationError('El documento / RNC es obligatorio.')
+    if not provincia:
+        raise ValidationError('La provincia es obligatoria.')
+    if not sector:
+        raise ValidationError('El sector es obligatorio.')
     if not direccion:
         raise ValidationError('La dirección de entrega es obligatoria.')
     if not ciudad:
@@ -52,6 +61,9 @@ def _datos_cliente(payload):
         'ciudad': ciudad,
         'referencia': str(payload.get('referencia') or '').strip(),
         'notas': str(payload.get('notas') or '').strip(),
+        'documento': documento,
+        'provincia': provincia,
+        'sector': sector,
     }
 
 
@@ -96,7 +108,7 @@ class CrearOrdenTarjetaView(APIView):
 
     La tarjeta solo se procesa en memoria (nunca se almacena).
     """
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         payload = request.data or {}
@@ -152,7 +164,7 @@ class CrearOrdenTarjetaView(APIView):
 
 class CrearOrdenPayPalView(APIView):
     """Crea la orden de tienda y la orden de pago en PayPal (sandbox o real)."""
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         payload = request.data or {}
@@ -233,7 +245,7 @@ class CrearOrdenBilleteraView(APIView):
     Este método queda preparado para integrar una billetera digital
     posteriormente; por ahora se registra el pedido y el pago queda pendiente.
     """
-    permission_classes = []
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         payload = request.data or {}

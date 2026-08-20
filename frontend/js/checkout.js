@@ -11,6 +11,10 @@
   var ENVIO = { costo: 25000, gratis_desde: 500000 };
   var estado = { metodo: 'tarjeta' };
 
+  function getToken() {
+    try { return localStorage.getItem('refri_access') || ''; } catch (e) { return ''; }
+  }
+
   function $(sel) { return document.querySelector(sel); }
   function $$(sel) { return Array.prototype.slice.call(document.querySelectorAll(sel)); }
 
@@ -170,6 +174,9 @@
     if (!$('#coNombre').value.trim()) return 'Ingresa tu nombre completo.';
     if (!/^\S+@\S+\.\S+$/.test($('#coEmail').value.trim())) return 'Ingresa un correo electrónico válido.';
     if (!$('#coTelefono').value.trim()) return 'Ingresa tu teléfono de contacto.';
+    if (!$('#coDocumento').value.trim()) return 'Ingresa tu documento o RNC.';
+    if (!$('#coProvincia').value.trim()) return 'Selecciona tu provincia.';
+    if (!$('#coSector').value.trim()) return 'Ingresa tu sector.';
     if (!$('#coCiudad').value.trim()) return 'Ingresa tu ciudad.';
     if (!$('#coDireccion').value.trim()) return 'Ingresa tu dirección de entrega.';
     return '';
@@ -180,6 +187,9 @@
       nombre: $('#coNombre').value.trim(),
       email: $('#coEmail').value.trim(),
       telefono: $('#coTelefono').value.trim(),
+      documento: $('#coDocumento').value.trim(),
+      provincia: $('#coProvincia').value.trim(),
+      sector: $('#coSector').value.trim(),
       ciudad: $('#coCiudad').value.trim(),
       direccion: $('#coDireccion').value.trim(),
       referencia: $('#coReferencia').value.trim(),
@@ -195,9 +205,12 @@
 
   async function api(path, options) {
     options = options || {};
+    var token = getToken();
+    var headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
     var res = await fetch(API_BASE + path, {
       ...options,
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      headers: headers,
     });
     var data = null;
     try { data = await res.json(); } catch (e) { /* cuerpo no JSON */ }
@@ -249,6 +262,9 @@
         nombre: payloadDatos().nombre,
         email: payloadDatos().email,
         telefono: payloadDatos().telefono,
+        documento: payloadDatos().documento,
+        provincia: payloadDatos().provincia,
+        sector: payloadDatos().sector,
         ciudad: payloadDatos().ciudad,
         direccion: payloadDatos().direccion,
         referencia: payloadDatos().referencia,
@@ -323,6 +339,12 @@
 
   /* ---------- Arranque ---------- */
   (async function init() {
+    if (!getToken()) {
+      try { localStorage.setItem('refri_checkout_return', '/checkout/'); } catch (e) { /* ok */ }
+      toast('Debes iniciar sesión para continuar con la compra.', 'error');
+      setTimeout(function () { window.location.href = '/'; }, 800);
+      return;
+    }
     await loadConfig();
     if (!window.Cart.items().length) {
       toast('Tu carrito está vacío. Agrega productos para continuar.', 'error');

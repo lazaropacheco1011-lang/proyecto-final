@@ -123,8 +123,8 @@
         ? '<p class="mt-3 rounded-lg bg-primary-container px-3 py-2 text-xs text-on-primary-container">' +
             'Agrega ' + moneyDOP(ENVIO.gratis_desde - subtotal) + ' más para envío gratis.</p>'
         : '<p class="mt-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-700">¡Tienes envío gratis!</p>') +
-      '<a href="/checkout/" class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">' +
-        '<span class="material-symbols-outlined">lock</span> Continuar al pago</a>' +
+      '<button data-pagar class="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 font-label-md text-white transition-colors hover:bg-primary-hover">' +
+        '<span class="material-symbols-outlined">lock</span> Continuar al pago</button>' +
       '<a href="/productos/" class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-outline-variant py-3 font-label-md text-on-surface transition-colors hover:bg-surface-dim">' +
         '<span class="material-symbols-outlined">arrow_back</span> Seguir comprando</a>' +
     '</div>';
@@ -149,6 +149,19 @@
       toast('Producto eliminado.', 'info');
     }
     render();
+  });
+
+  $('#cartSummary').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-pagar]');
+    if (!btn) return;
+    var token = null;
+    try { token = localStorage.getItem('refri_access'); } catch (e) { /* ok */ }
+    if (!token) {
+      try { localStorage.setItem('refri_checkout_return', '/checkout/'); } catch (e) { /* ok */ }
+      window.location.href = '/?open_login=1';
+      return;
+    }
+    window.location.href = '/checkout/';
   });
 
   /* ---------- Sesión (opcional) ---------- */

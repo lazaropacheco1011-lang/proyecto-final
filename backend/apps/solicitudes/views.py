@@ -1,10 +1,19 @@
 from rest_framework import viewsets
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from apps.core.permissions import CLIENTE, has_role, is_admin
+from apps.core.permissions import CLIENTE, TECNICO, has_role, is_admin
 from apps.core.services import register_audit
 from apps.notificaciones.services import notify_solicitud_creada, notify_solicitud_estado
 from apps.solicitudes.models import SolicitudInstalacion
 from apps.solicitudes.serializers import SolicitudInstalacionSerializer
+
+
+class IsNotTecnicoForWrite(BasePermission):
+    """Bloquea técnicos en acciones de escritura."""
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return not has_role(request.user, TECNICO)
 
 
 class SolicitudInstalacionViewSet(viewsets.ModelViewSet):
@@ -17,6 +26,9 @@ class SolicitudInstalacionViewSet(viewsets.ModelViewSet):
         'cliente__apellidos', 'cliente__documento_numero',
     ]
     ordering_fields = ['fecha_solicitud', 'prioridad', 'fecha_deseada']
+
+    def get_permissions(self):
+        return [perm() for perm in (IsNotTecnicoForWrite,)]
 
     def _staff_usuarios(self):
         from django.contrib.auth import get_user_model

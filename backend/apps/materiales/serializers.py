@@ -35,9 +35,16 @@ class MaterialSerializer(serializers.ModelSerializer):
                 )
             if float(attrs.get('stock_minimo', 0)) < 0:
                 raise serializers.ValidationError(
-                    {'stock_minimo': 'El stock mínimo no puede ser negativo.'}
+                    {'stock_minimo': 'El stock mínimo no puede ser negativa.'}
                 )
         return attrs
+
+
+class MaterialSerializerSinPrecio(MaterialSerializer):
+    """Sin campo precio para técnicos."""
+
+    class Meta(MaterialSerializer.Meta):
+        fields = [f for f in MaterialSerializer.Meta.fields if f != 'precio']
 
 
 class MovimientoInventarioSerializer(serializers.ModelSerializer):

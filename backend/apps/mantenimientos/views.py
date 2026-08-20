@@ -5,7 +5,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.permissions import CLIENTE, TECNICO, has_role, is_admin
+from apps.core.permissions import CLIENTE, TECNICO, get_supervisor_tecnico_ids, has_role, is_admin, is_supervisor
 from apps.core.services import register_audit
 from apps.mantenimientos.models import Mantenimiento
 from apps.mantenimientos.serializers import MantenimientoSerializer
@@ -31,9 +31,18 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
             return qs.filter(cliente__user=user)
         if has_role(user, TECNICO):
             return qs.filter(tecnico__user=user)
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if tecnicos_ids:
+                return qs.filter(tecnico__user_id__in=tecnicos_ids)
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):
+        user = self.request.user
+        if has_role(user, TECNICO):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Los técnicos no pueden crear mantenimientos.')
         obj = serializer.save()
         register_audit(self.request.user, 'crear', obj, model_name='mantenimientos.mantenimiento')
         self._notificar(obj, 'creado')
@@ -48,7 +57,16 @@ class MantenimientoViewSet(viewsets.ModelViewSet):
         self._notificar(obj, 'actualizado')
 
     def perform_destroy(self, instance):
-        if not is_admin(self.request.user):
+        user = self.request.user
+        if has_role(user, TECNICO):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Los técnicos no pueden eliminar mantenimientos.')
+        if is_supervisor(user):
+            from rest_framework.exceptions import PermissionDenied
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if not instance.tecnico or instance.tecnico.user_id not in tecnicos_ids:
+                raise PermissionDenied('Solo puedes eliminar mantenimientos asignados a tus técnicos.')
+        elif not is_admin(user):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Solo el administrador puede eliminar mantenimientos (RN-08).')
         register_audit(self.request.user, 'eliminar', instance, model_name='mantenimientos.mantenimiento')

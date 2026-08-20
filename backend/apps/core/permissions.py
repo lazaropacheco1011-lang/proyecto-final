@@ -18,9 +18,21 @@ def is_admin(user):
     return has_role(user, ADMIN)
 
 
+def is_supervisor(user):
+    return has_role(user, SUPERVISOR)
+
+
 def is_staff_role(user):
     """Roles internos de la empresa (no clientes)."""
     return has_role(user, ADMIN, SUPERVISOR, TECNICO, ALMACEN)
+
+
+def get_supervisor_tecnico_ids(user):
+    """Devuelve los IDs de los técnicos que gestiona el supervisor dado."""
+    perfil = getattr(user, 'perfil_supervisor', None)
+    if not perfil:
+        return []
+    return list(perfil.tecnicos.values_list('user_id', flat=True))
 
 
 class IsAdmin(BasePermission):
@@ -101,3 +113,12 @@ class IsAssignedTecnicoOrStaff(BasePermission):
         if not tecnico:
             return False
         return bool(getattr(tecnico, 'user_id', None) == user.id)
+
+
+class NoTecnico(BasePermission):
+    """Bloquea acceso a técnicos. Para endpoints financieros."""
+    message = 'Los técnicos no tienen acceso a esta información.'
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated
+                    and not has_role(request.user, TECNICO))

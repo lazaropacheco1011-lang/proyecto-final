@@ -55,13 +55,17 @@ class OrdenSerializer(serializers.ModelSerializer):
     metodo_pago = serializers.CharField(read_only=True)
     estado_pago = serializers.CharField(read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
+    usuario_nombre = serializers.CharField(source='usuario.username', read_only=True)
 
     class Meta:
         model = Orden
         fields = [
             'id', 'numero', 'cliente', 'cliente_display', 'nombre_cliente',
             'email', 'telefono', 'direccion_entrega', 'ciudad_entrega',
-            'referencia_entrega', 'notas', 'subtotal', 'envio', 'descuento',
+            'referencia_entrega', 'notas',
+            'documento', 'provincia', 'sector',
+            'usuario', 'usuario_nombre',
+            'subtotal', 'envio', 'descuento',
             'total', 'moneda', 'estado', 'estado_display', 'items', 'pagos',
             'historial', 'metodo_pago', 'estado_pago', 'created_at', 'updated_at',
         ]

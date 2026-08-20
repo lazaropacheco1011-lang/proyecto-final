@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from apps.accounts.models import Tecnico
+from apps.accounts.models import Supervisor, Tecnico
 from apps.clientes.models import Cliente
 from apps.core.permissions import ADMIN, ALMACEN, CLIENTE, SUPERVISOR, TECNICO
 
@@ -423,18 +423,51 @@ class TecnicoSerializer(serializers.ModelSerializer):
     nombre = serializers.CharField(source='user.get_full_name', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
     rol = serializers.CharField(source='user.get_role_display', read_only=True)
+    supervisor_nombre = serializers.SerializerMethodField()
 
     class Meta:
         model = Tecnico
         fields = [
             'id', 'user', 'username', 'nombre', 'email', 'rol',
+            'supervisor', 'supervisor_nombre',
             'especialidad', 'telefono', 'direccion', 'disponible',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'user', 'username', 'nombre', 'email', 'rol', 'created_at', 'updated_at']
+        read_only_fields = [
+            'id', 'user', 'username', 'nombre', 'email', 'rol',
+            'supervisor_nombre', 'created_at', 'updated_at',
+        ]
         extra_kwargs = {'telefono': {'allow_blank': True}}
+
+    def get_supervisor_nombre(self, obj):
+        if obj.supervisor and obj.supervisor.user:
+            return obj.supervisor.user.get_full_name() or obj.supervisor.user.username
+        return ''
 
     def validate_user(self, value):
         if value and value.role != 'tecnico':
             raise serializers.ValidationError('El usuario debe tener el rol de técnico.')
         return value
+
+
+class SupervisorSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    nombre = serializers.CharField(source='user.get_full_name', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    rol = serializers.CharField(source='user.get_role_display', read_only=True)
+    tecnicos_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Supervisor
+        fields = [
+            'id', 'user', 'username', 'nombre', 'email', 'rol',
+            'telefono', 'tecnicos_count',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'user', 'username', 'nombre', 'email', 'rol',
+            'tecnicos_count', 'created_at', 'updated_at',
+        ]
+
+    def get_tecnicos_count(self, obj):
+        return obj.tecnicos.count()

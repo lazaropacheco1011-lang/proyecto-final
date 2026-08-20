@@ -3,7 +3,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from apps.core.permissions import CLIENTE, has_role, is_admin
+from apps.core.permissions import CLIENTE, TECNICO, has_role, is_admin
 from apps.core.services import delete_or_conflict, register_audit, reject_if
 from apps.equipos.models import Equipo, TipoEquipo
 from apps.equipos.serializers import EquipoSerializer, TipoEquipoSerializer
@@ -15,6 +15,13 @@ class TipoEquipoViewSet(viewsets.ModelViewSet):
     serializer_class = TipoEquipoSerializer
     search_fields = ['nombre', 'descripcion']
     ordering_fields = ['nombre']
+
+    def get_permissions(self):
+        from rest_framework.permissions import IsAuthenticated
+        from apps.core.permissions import IsAdminOrAlmacen
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [perm() for perm in (IsAdminOrAlmacen,)]
+        return [perm() for perm in (IsAuthenticated,)]
 
     def perform_create(self, serializer):
         obj = serializer.save()
@@ -46,6 +53,13 @@ class EquipoViewSet(viewsets.ModelViewSet):
         'cliente__nombre', 'cliente__apellidos',
     ]
     ordering_fields = ['marca', 'modelo', 'created_at', 'updated_at']
+
+    def get_permissions(self):
+        from rest_framework.permissions import IsAuthenticated
+        from apps.core.permissions import IsAdminOrSupervisor
+        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+            return [perm() for perm in (IsAdminOrSupervisor,)]
+        return [perm() for perm in (IsAuthenticated,)]
 
     def get_queryset(self):
         qs = super().get_queryset()

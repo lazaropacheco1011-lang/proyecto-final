@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from apps.accounts.models import Tecnico, User
+from apps.accounts.models import Supervisor, Tecnico, User
 
 
 @admin.register(User)
@@ -23,8 +23,14 @@ class UserAdmin(BaseUserAdmin):
     )
 
 
+@admin.register(Supervisor)
+class SupervisorAdmin(admin.ModelAdmin):
+    list_display = ['user', 'telefono', 'created_at']
+    search_fields = ['user__username', 'user__first_name', 'user__last_name']
+
+
 @admin.register(Tecnico)
 class TecnicoAdmin(admin.ModelAdmin):
-    list_display = ['user', 'especialidad', 'telefono', 'disponible']
-    list_filter = ['disponible']
+    list_display = ['user', 'supervisor', 'especialidad', 'telefono', 'disponible']
+    list_filter = ['disponible', 'supervisor']
     search_fields = ['user__username', 'user__first_name', 'user__last_name']

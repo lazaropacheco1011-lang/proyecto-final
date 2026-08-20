@@ -12,7 +12,7 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from apps.accounts.models import Tecnico
+from apps.accounts.models import Supervisor, Tecnico
 from apps.accounts.services import (
     buscar_token,
     enviar_correo_recuperacion,
@@ -27,6 +27,7 @@ from apps.accounts.serializers import (
     PasswordRecoverySerializer,
     PasswordResetConfirmSerializer,
     RegisterSerializer,
+    SupervisorSerializer,
     TecnicoSerializer,
     UserCreateSerializer,
     UserSerializer,
@@ -347,6 +348,15 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ['username', 'email', 'first_name', 'last_name', 'phone']
     ordering_fields = ['date_joined', 'username', 'role']
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if has_role(user, SUPERVISOR):
+            return qs.filter(role=TECNICO, perfil_tecnico__supervisor__user=user)
+        if has_role(user, TECNICO):
+            return qs.filter(pk=user.pk)
+        return qs
+
     def get_permissions(self):
         if self.action in ('create', 'destroy', 'update', 'partial_update'):
             return [perm() for perm in (IsAdminWriteOnly,)]
@@ -409,9 +419,9 @@ class IsStaffReadOnly(BasePermission):
 
 class TecnicoViewSet(viewsets.ModelViewSet):
     """Perfiles de técnicos y su disponibilidad."""
-    queryset = Tecnico.objects.select_related('user').all()
+    queryset = Tecnico.objects.select_related('user', 'supervisor', 'supervisor__user').all()
     serializer_class = TecnicoSerializer
-    filterset_fields = ['disponible', 'user__role']
+    filterset_fields = ['disponible', 'user__role', 'supervisor']
     search_fields = ['user__username', 'user__first_name', 'user__last_name', 'especialidad']
     ordering_fields = ['user__first_name']
 
@@ -425,6 +435,8 @@ class TecnicoViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if has_role(user, TECNICO):
             return qs.filter(user=user)
+        if has_role(user, SUPERVISOR):
+            return qs
         return qs
 
     def perform_create(self, serializer):
@@ -437,6 +449,34 @@ class TecnicoViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         register_audit(self.request.user, 'eliminar', instance, model_name='accounts.tecnico')
+        usuario = instance.user
+        instance.delete()
+        if usuario and usuario.pk and usuario != self.request.user:
+            usuario.delete()
+
+
+class SupervisorViewSet(viewsets.ModelViewSet):
+    """CRUD de supervisores."""
+    queryset = Supervisor.objects.select_related('user').all()
+    serializer_class = SupervisorSerializer
+    search_fields = ['user__username', 'user__first_name', 'user__last_name']
+    ordering_fields = ['user__first_name', 'created_at']
+
+    def get_permissions(self):
+        if self.action in ('create', 'destroy', 'update', 'partial_update'):
+            return [perm() for perm in (IsAdminWriteOnly,)]
+        return [perm() for perm in (IsStaffReadOnly,)]
+
+    def perform_create(self, serializer):
+        supervisor = serializer.save()
+        register_audit(self.request.user, 'crear', supervisor, model_name='accounts.supervisor')
+
+    def perform_update(self, serializer):
+        supervisor = serializer.save()
+        register_audit(self.request.user, 'actualizar', supervisor, model_name='accounts.supervisor')
+
+    def perform_destroy(self, instance):
+        register_audit(self.request.user, 'eliminar', instance, model_name='accounts.supervisor')
         usuario = instance.user
         instance.delete()
         if usuario and usuario.pk and usuario != self.request.user:

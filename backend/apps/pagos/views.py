@@ -1,19 +1,21 @@
 from rest_framework import viewsets
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 
-from apps.core.permissions import ADMIN, ALMACEN, CLIENTE, SUPERVISOR, has_role, is_admin
+from apps.core.permissions import ADMIN, ALMACEN, CLIENTE, SUPERVISOR, get_supervisor_tecnico_ids, has_role, is_admin, is_supervisor
 from apps.core.services import register_audit
 from apps.notificaciones.services import notify_pago_confirmado
 from apps.pagos.models import Factura, Pago
 from apps.pagos.serializers import FacturaSerializer, PagoSerializer
 
 
-class StaffWritePermission(BasePermission):
-    """Lectura para cualquier usuario autenticado; escritura solo personal interno."""
-    message = 'Solo el personal interno puede crear o modificar pagos/facturas.'
+class StaffNoTecnicoPermission(BasePermission):
+    """Acceso a pagos/facturas: personal interno excepto técnicos."""
+    message = 'Los técnicos no tienen acceso a información de pagos.'
 
     def has_permission(self, request, view):
         if not (request.user and request.user.is_authenticated):
+            return False
+        if has_role(request.user, 'tecnico'):
             return False
         if request.method in SAFE_METHODS:
             return True
@@ -24,7 +26,7 @@ class PagoViewSet(viewsets.ModelViewSet):
     """Pagos y abonos de clientes (RF-18)."""
     queryset = Pago.objects.select_related('cliente', 'orden', 'instalacion').all()
     serializer_class = PagoSerializer
-    permission_classes = [StaffWritePermission]
+    permission_classes = [StaffNoTecnicoPermission]
     filterset_fields = ['cliente', 'orden', 'instalacion', 'metodo', 'estado', 'fecha']
     search_fields = ['referencia', 'cliente__nombre', 'cliente__documento_numero']
     ordering_fields = ['fecha', 'monto', 'created_at']
@@ -34,6 +36,11 @@ class PagoViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if has_role(user, CLIENTE):
             return qs.filter(cliente__user=user)
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if tecnicos_ids:
+                return qs.filter(orden__tecnico__user_id__in=tecnicos_ids)
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):
@@ -53,8 +60,11 @@ class PagoViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        if not is_admin(self.request.user):
-            from rest_framework.exceptions import PermissionDenied
+        from rest_framework.exceptions import PermissionDenied
+        user = self.request.user
+        if has_role(user, SUPERVISOR):
+            raise PermissionDenied('Los supervisores no pueden eliminar pagos.')
+        if not is_admin(user):
             raise PermissionDenied('Solo el administrador puede eliminar pagos (RN-08).')
         register_audit(self.request.user, 'eliminar', instance, model_name='pagos.pago')
         instance.delete()
@@ -64,7 +74,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     """Facturas y comprobantes de servicio (RF-19)."""
     queryset = Factura.objects.prefetch_related('pagos').select_related('cliente', 'orden', 'creado_por')
     serializer_class = FacturaSerializer
-    permission_classes = [StaffWritePermission]
+    permission_classes = [StaffNoTecnicoPermission]
     filterset_fields = ['cliente', 'orden', 'fecha']
     search_fields = ['numero', 'cliente__nombre']
     ordering_fields = ['fecha', 'total', 'created_at']
@@ -74,6 +84,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if has_role(user, CLIENTE):
             return qs.filter(cliente__user=user)
+        if is_supervisor(user):
+            tecnicos_ids = get_supervisor_tecnico_ids(user)
+            if tecnicos_ids:
+                return qs.filter(orden__tecnico__user_id__in=tecnicos_ids)
+            return qs.none()
         return qs
 
     def perform_create(self, serializer):
@@ -92,8 +107,11 @@ class FacturaViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        if not is_admin(self.request.user):
-            from rest_framework.exceptions import PermissionDenied
+        from rest_framework.exceptions import PermissionDenied
+        user = self.request.user
+        if has_role(user, SUPERVISOR):
+            raise PermissionDenied('Los supervisores no pueden eliminar facturas.')
+        if not is_admin(user):
             raise PermissionDenied('Solo el administrador puede eliminar facturas (RN-08).')
         register_audit(self.request.user, 'eliminar', instance, model_name='pagos.factura')
         instance.delete()

@@ -220,7 +220,8 @@
   }
 
   function isAdmin() { return S.user && S.user.role === 'administrador'; }
-  function canDelete() { return isAdmin(); }
+  function isSupervisor() { return S.user && S.user.role === 'supervisor'; }
+  function canDelete() { return isAdmin() || isSupervisor(); }
   function canManageAlmacen() { return isAdmin() || S.user.role === 'almacen'; }
 
   /* ------------------------------------------------------------------
@@ -848,7 +849,7 @@
       '<select id="exportTipo" class="adm-select w-auto">' +
         '<option value="general">General</option><option value="instalaciones">Instalaciones</option>' +
         '<option value="servicios">Servicios</option><option value="materiales">Materiales</option>' +
-        '<option value="pagos">Pagos</option>' +
+        (S.user.role === 'tecnico' ? '' : '<option value="pagos">Pagos</option>') +
       '</select>' +
       '<button data-export="pdf" class="btn btn-ghost"><span class="material-symbols-outlined text-sm">picture_as_pdf</span>PDF</button>' +
       '<button data-export="xlsx" class="btn btn-ghost"><span class="material-symbols-outlined text-sm">table_view</span>Excel</button>' +
@@ -867,15 +868,19 @@
     html += statCard('Servicios pendientes', d.servicios_pendientes, 'pending_actions', 'text-warning');
     html += statCard('Servicios en proceso', d.servicios_en_proceso, 'autorenew', 'text-secondary');
     html += statCard('Servicios completados', d.servicios_completados, 'check_circle', 'text-success');
-    html += statCard('Ventas', money(d.ventas), 'trending_up', 'text-success');
-    html += statCard('Pagos pendientes', money(d.pagos_pendientes), 'hourglass_empty', 'text-warning');
+    if (S.user.role !== 'tecnico') {
+      html += statCard('Ventas', money(d.ventas), 'trending_up', 'text-success');
+      html += statCard('Pagos pendientes', money(d.pagos_pendientes), 'hourglass_empty', 'text-warning');
+    }
     html += statCard('Mantenimientos próximos', d.mantenimientos_proximos, 'event_available', 'text-secondary');
     html += statCard('Mantenimientos vencidos', d.mantenimientos_vencidos, 'event_busy',
                      d.mantenimientos_vencidos ? 'text-error' : 'text-on-surface-variant');
     html += statCard('Materiales', d.materiales_count, 'inventory_2');
     html += statCard('Stock bajo', d.materiales_stock_bajo, 'warning',
                      d.materiales_stock_bajo ? 'text-error' : 'text-success');
-    html += statCard('Pagos recibidos', money(d.total_pagos), 'payments', 'text-success');
+    if (S.user.role !== 'tecnico') {
+      html += statCard('Pagos recibidos', money(d.total_pagos), 'payments', 'text-success');
+    }
     html += statCard('Calificación promedio', d.calificacion_promedio != null
                      ? Number(d.calificacion_promedio).toFixed(1) : '—', 'star', 'text-warning');
     html += '</div>';
@@ -993,6 +998,9 @@
           return '<div class="font-semibold text-on-surface">' + esc(t.nombre) + '</div>' +
                  '<div class="text-xs text-on-surface-variant">@' + esc(t.username) + '</div>';
         } },
+      { label: 'Supervisor', render: function (t) {
+          return t.supervisor_nombre ? esc(t.supervisor_nombre) : '<span class="text-on-surface-variant">—</span>';
+        } },
       { label: 'Especialidad', key: 'especialidad' },
       { label: 'Teléfono', key: 'telefono' },
       { label: 'Correo', key: 'email' },
@@ -1021,7 +1029,57 @@
           { name: 'disponible', label: 'Disponibilidad', value: state.disponible, options: [
               { value: 'true', label: 'Disponibles' }, { value: 'false', label: 'Ocupados' } ] },
         ],
-        buttons: [{ action: 'crear', icon: 'person_add', label: 'Agregar técnico' }],
+        buttons: (function () {
+          var btns = [{ action: 'crear', icon: 'person_add', label: 'Agregar técnico' }];
+          if (S.user.role === 'supervisor') btns.push({ action: 'crear_trabajo', icon: 'add', label: 'Agregar trabajo' });
+          return btns;
+        })(),
+      },
+      columns: columns,
+      items: data.results || [],
+    });
+  }
+
+  /* ------------------------------------------------------------------
+   * SUPERVISORES
+   * ------------------------------------------------------------------ */
+  async function renderSupervisores() {
+    setViewLoading();
+    var state = st('supervisores', {});
+    var data;
+    try {
+      data = await loadList('/api/supervisores/', state, []);
+    } catch (err) {
+      setViewError(apiErrorMessage(err));
+      return;
+    }
+    var columns = [
+      { label: 'Supervisor', render: function (s) {
+          return '<div class="font-semibold text-on-surface">' + esc(s.nombre) + '</div>' +
+                 '<div class="text-xs text-on-surface-variant">@' + esc(s.username) + '</div>';
+        } },
+      { label: 'Correo', key: 'email' },
+      { label: 'Teléfono', key: 'telefono' },
+      { label: 'Técnicos', render: function (s) {
+          return '<span class="badge badge-primary">' + (s.tecnicos_count || 0) + '</span>';
+        } },
+      { label: 'Registro', render: function (s) { return fmtDate(s.created_at); } },
+      { label: 'Acciones', render: function (s) {
+          var btns = [
+            { kind: 'icon', action: 'editar', icon: 'edit', title: 'Editar supervisor', color: 'primary' },
+            { kind: 'icon', action: 'editar_usuario', icon: 'manage_accounts', title: 'Editar usuario' },
+          ];
+          if (canDelete()) btns.push({ kind: 'icon', action: 'eliminar', icon: 'delete', title: 'Eliminar supervisor', danger: true });
+          return actionBtns(s, btns);
+        } },
+    ];
+    $('#view').innerHTML = viewShell({
+      state: state,
+      data: data,
+      toolbar: {
+        search: state.search,
+        placeholder: 'Buscar por nombre, usuario, correo…',
+        buttons: [{ action: 'crear', icon: 'person_add', label: 'Agregar supervisor' }],
       },
       columns: columns,
       items: data.results || [],
@@ -1264,8 +1322,10 @@
               { value: 'en_proceso', label: 'En proceso' }, { value: 'finalizada', label: 'Finalizada' },
               { value: 'cancelada', label: 'Cancelada' }, { value: 'reprogramada', label: 'Reprogramada' } ] },
         ],
-        buttons: [
+        buttons: (S.user.role === 'administrador' || S.user.role === 'supervisor') ? [
           { action: 'crear', icon: 'add', label: 'Nueva instalación' },
+          { action: 'agenda', icon: 'calendar_month', label: 'Agenda', variant: 'btn-ghost' },
+        ] : [
           { action: 'agenda', icon: 'calendar_month', label: 'Agenda', variant: 'btn-ghost' },
         ],
       },
@@ -1362,8 +1422,10 @@
           '<button class="btn btn-ghost" data-cal="next" title="Mes siguiente"><span class="material-symbols-outlined">chevron_right</span></button>' +
           '<span class="ml-2 text-lg font-bold capitalize tracking-tight text-on-surface">' + esc(nombreMes) + '</span>' +
         '</div>' +
-        '<button data-action="crear" class="btn btn-primary"><span class="material-symbols-outlined text-sm">add</span>Nueva instalación</button>' +
-      '</div>' +
+          (S.user.role === 'administrador' || S.user.role === 'supervisor'
+            ? '<button data-action="crear" class="btn btn-primary"><span class="material-symbols-outlined text-sm">add</span>Nueva instalación</button>'
+            : '') +
+        '</div>' +
       '<div class="cal-grid">' +
         ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(function (w) { return '<div class="cal-dow">' + w + '</div>'; }).join('') +
         celdas.map(function (c) {
@@ -1662,16 +1724,19 @@
 
   function renderDetMateriales(i) {
     var cont = $('#detMateriales');
+    var isTecnico = S.user.role === 'tecnico';
     var filas = (i.materiales_instalacion || []).map(function (m) {
-      return '<div class="flex items-center justify-between gap-2 py-2">' +
-             '<div class="min-w-0"><div class="truncate text-sm font-medium text-on-surface">' + esc(m.material_nombre) + '</div>' +
-             '<div class="text-xs text-on-surface-variant">' + m.cantidad + ' ' + esc(m.material_unidad) + ' × ' + money(m.precio_unitario) + '</div></div>' +
-             '<div class="font-semibold text-on-surface">' + money(m.subtotal) + '</div></div>';
+      var detLine = '<div class="min-w-0"><div class="truncate text-sm font-medium text-on-surface">' + esc(m.material_nombre) + '</div>' +
+             '<div class="text-xs text-on-surface-variant">' + m.cantidad + ' ' + esc(m.material_unidad) +
+             (isTecnico ? '' : ' × ' + money(m.precio_unitario)) + '</div></div>';
+      return '<div class="flex items-center justify-between gap-2 py-2">' + detLine +
+             (isTecnico ? '' : '<div class="font-semibold text-on-surface">' + money(m.subtotal) + '</div>') + '</div>';
     }).join('');
     cont.innerHTML =
       '<div class="divide-y divide-outline-variant">' + (filas || '<p class="py-1 text-sm text-on-surface-variant">Sin materiales registrados.</p>') + '</div>' +
-      '<div class="mt-1 flex justify-between border-t border-outline-variant pt-2 text-sm"><span class="font-semibold text-on-surface">Total materiales</span>' +
-      '<span class="font-bold text-primary">' + money(i.total_materiales) + '</span></div>' +
+      (isTecnico ? '' :
+       '<div class="mt-1 flex justify-between border-t border-outline-variant pt-2 text-sm"><span class="font-semibold text-on-surface">Total materiales</span>' +
+       '<span class="font-bold text-primary">' + money(i.total_materiales) + '</span></div>') +
       '<p class="mt-2 text-xs text-on-surface-variant">El inventario se descuenta al finalizar la instalación (RN-06).</p>' +
       '<form id="formMaterial" class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">' +
         '<select name="material" class="adm-select sm:col-span-1" required><option value="">Material…</option></select>' +
@@ -1979,7 +2044,9 @@
             return m.stock_bajo ? '<span class="badge badge-error">Bajo</span>'
                                 : '<span class="badge badge-success">OK</span>';
           } },
+      ].concat(S.user.role !== 'tecnico' ? [
         { label: 'Precio', render: function (m) { return money(m.precio); } },
+      ] : []).concat([
         { label: 'Acciones', render: function (m) {
             var btns = [
               { kind: 'icon', action: 'entrada', icon: 'inventory', title: 'Entrada / ajuste' },
@@ -1990,7 +2057,7 @@
             }
             return actionBtns(m, btns);
           } },
-      ],
+      ]),
       items: mats.results || [],
     });
     $('#view').innerHTML = html;
@@ -2579,6 +2646,8 @@
       return;
     }
     var canManage = STAFF_ROLES.indexOf(S.user.role) >= 0;
+    var canCreateOrder = S.user.role === 'administrador' || S.user.role === 'supervisor';
+    var canRequestRepair = S.user.role === 'cliente';
     var html = '';
     if (state.tipo_servicio === 'reparacion') {
       html += '<div class="info-banner"><span class="material-symbols-outlined text-base">build</span>' +
@@ -2616,8 +2685,9 @@
           { name: 'estado', label: 'Estado', value: state.estado, options: ESTADOS_SERVICIO },
           { name: 'tipo_servicio', label: 'Tipo', value: state.tipo_servicio, options: TIPOS_SERVICIO },
         ],
-        buttons: canManage ? [{ action: 'crear', icon: 'add', label: 'Nueva orden' }]
-                           : [{ action: 'crear', icon: 'add', label: 'Solicitar reparación' }],
+        buttons: canCreateOrder ? [{ action: 'crear', icon: 'add', label: S.user.role === 'supervisor' ? 'Agregar Trabajo' : 'Nueva orden' }]
+                                : canRequestRepair ? [{ action: 'crear', icon: 'add', label: 'Solicitar reparación' }]
+                                : [],
       },
       columns: columns,
       items: data.results || [],
@@ -2658,27 +2728,47 @@
     html += f('Trabajo realizado', o.trabajo_realizado);
     html += f('Observaciones técnicas', o.observaciones);
     if (o.materiales_utilizados && o.materiales_utilizados.length) {
+      var matCols = [
+        { label: 'Material', key: 'material_nombre' },
+        { label: 'Cant.', key: 'cantidad' },
+      ];
+      if (S.user.role !== 'tecnico') {
+        matCols.push({ label: 'Subtotal', render: function (m) { return money(m.subtotal); } });
+      }
       html += '<div class="sm:col-span-2"><p class="mb-2 text-xs font-semibold uppercase tracking-wide text-on-surface-variant">Materiales utilizados</p>' +
-              buildTable([
-                { label: 'Material', key: 'material_nombre' },
-                { label: 'Cant.', key: 'cantidad' },
-                { label: 'Subtotal', render: function (m) { return money(m.subtotal); } },
-              ], o.materiales_utilizados) + '</div>';
+              buildTable(matCols, o.materiales_utilizados) + '</div>';
     }
     html += '</div>';
     openModal('Orden ' + esc(o.numero), html, {
       width: '720px',
       footer: '<button type="button" class="btn btn-ghost" data-close>Cerrar</button>' +
               (S.user.role === 'cliente' ? '' :
+               '<button type="button" class="btn btn-ghost" data-pdf="' + o.id + '"><span class="material-symbols-outlined text-sm">picture_as_pdf</span>PDF</button>' +
                '<button type="button" class="btn btn-primary" id="btnEditarServicio">Editar</button>'),
     });
     var btnEditar = $('#btnEditarServicio');
     if (btnEditar) btnEditar.addEventListener('click', function () { openServicioForm(o); });
+    var btnPdf = document.querySelector('[data-pdf]');
+    if (btnPdf) btnPdf.addEventListener('click', async function () {
+      var id = btnPdf.dataset.pdf;
+      var token = localStorage.getItem('refri_access');
+      try {
+        var res = await fetch(API_BASE + '/api/servicios/' + id + '/pdf/', {
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+        });
+        if (res.status === 401) { toast('Sesión expirada. Vuelve a iniciar sesión.', 'error'); return; }
+        if (!res.ok) { toast('No se pudo descargar el PDF.', 'error'); return; }
+        var blob = await res.blob();
+        var url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch (e) { toast('Error al descargar el PDF.', 'error'); }
+    });
   }
 
   async function openServicioForm(item) {
     var isClient = S.user.role === 'cliente';
-    var clientes = [], equipos = [], tecnicos = [];
+    var isTecnico = S.user.role === 'tecnico';
+    var equipos = [], tecnicos = [];
     try { equipos = await fetchAll('/api/equipos/'); } catch (e) {}
     function equipoLabel(e) {
       return [e.tipo_nombre, e.marca, e.modelo, e.numero_serie].filter(Boolean).join(' · ');
@@ -2694,12 +2784,16 @@
         { name: 'problema_reportado', label: 'Problema reportado', type: 'textarea', span: 2, required: true,
           value: item ? item.problema_reportado : '', placeholder: 'Describe la falla o el servicio que necesitas…' },
       ];
+    } else if (isTecnico) {
+      fields = [
+        { name: 'estado', label: 'Estado', type: 'select', value: item ? item.estado : 'pendiente', options: ESTADOS_SERVICIO },
+        { name: 'diagnostico', label: 'Diagnóstico', type: 'textarea', span: 2, value: item ? item.diagnostico : '' },
+        { name: 'trabajo_realizado', label: 'Trabajo realizado', type: 'textarea', span: 2, value: item ? item.trabajo_realizado : '' },
+        { name: 'observaciones', label: 'Observaciones técnicas', type: 'textarea', span: 2, value: item ? item.observaciones : '' },
+      ];
     } else {
-      try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) {}
       try { tecnicos = await fetchAll('/api/tecnicos/'); } catch (e) {}
       fields = [
-        { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
-          options: optList(clientes, 'id', 'nombre_completo') },
         { name: 'equipo', label: 'Equipo', type: 'select', value: item ? item.equipo : '',
           options: optList(equipos, 'id', equipoLabel) },
         { name: 'tecnico', label: 'Técnico asignado', type: 'select', value: item ? item.tecnico : '',
@@ -2715,26 +2809,87 @@
       ];
     }
     var sinEquipos = isClient && !equipos.length;
+    var clienteSearchHTML = '';
+    if (!isClient && !isTecnico) {
+      var cliVal = item ? item.cliente : '';
+      var cliNombre = item ? (item.cliente_nombre || '') : '';
+      clienteSearchHTML =
+        '<div class="mb-3">' +
+          '<label class="field-label" for="f_cliente_search">Buscar cliente</label>' +
+          '<div style="position:relative">' +
+            '<input id="f_cliente_search" class="adm-input" type="text" placeholder="Escribe nombre o apellido del cliente…" autocomplete="off" value="' + esc(cliNombre) + '" style="width:100%">' +
+            '<input id="f_cliente" name="cliente" type="hidden" value="' + esc(cliVal) + '">' +
+            '<div id="f_cliente_results" class="hidden" style="position:absolute;top:100%;left:0;right:0;z-index:50;background:#fff;border:1px solid #e2e8f0;border-radius:0.5rem;max-height:240px;overflow-y:auto;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);margin-top:2px"></div>' +
+          '</div>' +
+          '<p id="f_cliente_hint" class="mt-1 text-xs text-on-surface-variant">' +
+            (cliVal ? '<span class="text-success">Cliente seleccionado</span>' : 'Escribe al menos 2 caracteres para buscar') +
+          '</p>' +
+        '</div>';
+    }
     var body = (sinEquipos
       ? '<div class="info-banner mb-3"><span class="material-symbols-outlined text-base">info</span>' +
         '<span class="flex-1">Aún no has registrado equipos. Regístralo desde <strong>Mis equipos</strong> para poder solicitar el servicio.</span>' +
         '<button type="button" class="btn btn-primary" data-ir-mis-equipos>Ir a Mis equipos</button></div>'
-      : '') + formHTML(fields);
-    var modal = openModal(item ? 'Editar orden #' + item.numero : (isClient ? 'Solicitar reparación' : 'Nueva orden de servicio'), body, {
+      : '') + clienteSearchHTML + formHTML(fields);
+    var modal = openModal(item ? 'Editar orden #' + item.numero : (isClient ? 'Solicitar reparación' : S.user.role === 'supervisor' ? 'Nuevo Trabajo' : 'Nueva orden de servicio'), body, {
       width: '720px',
-      footer: modalFooter('Cancelar', item ? 'Guardar cambios' : (isClient ? 'Enviar solicitud' : 'Crear orden')),
+      footer: modalFooter('Cancelar', item ? 'Guardar cambios' : (isClient ? 'Enviar solicitud' : S.user.role === 'supervisor' ? 'Crear trabajo' : 'Crear orden')),
     });
     var btnIr = modal.querySelector('[data-ir-mis-equipos]');
     if (btnIr) btnIr.addEventListener('click', function () { closeModal(); go('mis_equipos'); });
+    var cliSearch = modal.querySelector('#f_cliente_search');
+    var cliHidden = modal.querySelector('#f_cliente');
+    var cliResults = modal.querySelector('#f_cliente_results');
+    var cliHint = modal.querySelector('#f_cliente_hint');
+    if (cliSearch && cliHidden && cliResults) {
+      var cliTimer = null;
+      cliSearch.addEventListener('input', function () {
+        clearTimeout(cliTimer);
+        var q = cliSearch.value.trim();
+        if (q.length < 2) { cliResults.classList.add('hidden'); return; }
+        cliTimer = setTimeout(async function () {
+          try {
+            var data = await api('/api/clientes/disponibles/?search=' + encodeURIComponent(q));
+            var list = Array.isArray(data) ? data : (data.results || []);
+            if (!list.length) {
+              cliResults.innerHTML = '<div class="px-3 py-2 text-sm text-on-surface-variant">No se encontraron clientes</div>';
+              cliResults.classList.remove('hidden');
+              return;
+            }
+            cliResults.innerHTML = list.map(function (c) {
+              return '<div class="cli-suggest-item" data-id="' + c.id + '" data-name="' + esc(c.nombre_completo) + '" ' +
+                'style="padding:8px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">' +
+                '<span class="material-symbols-outlined text-sm text-on-surface-variant">person</span>' +
+                '<span>' + esc(c.nombre_completo) + '</span>' +
+                '<span class="ml-auto text-xs text-on-surface-variant">' + esc(c.ciudad || '') + '</span>' +
+              '</div>';
+            }).join('');
+            cliResults.classList.remove('hidden');
+          } catch (e) { /* ignore */ }
+        }, 350);
+      });
+      cliResults.addEventListener('mousedown', function (e) {
+        var opt = e.target.closest('.cli-suggest-item');
+        if (!opt) return;
+        e.preventDefault();
+        cliHidden.value = opt.dataset.id;
+        cliSearch.value = opt.dataset.name;
+        cliResults.classList.add('hidden');
+        if (cliHint) cliHint.innerHTML = '<span class="text-success">Cliente seleccionado</span>';
+      });
+      cliSearch.addEventListener('blur', function () {
+        setTimeout(function () { cliResults.classList.add('hidden'); }, 200);
+      });
+    }
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
-      var data = getFormData(e.target, ['equipo', 'tecnico']);
+      var data = getFormData(e.target, ['equipo', 'tecnico', 'cliente']);
       var btn = e.target.querySelector('[type=submit]');
       setBusy(btn, true);
       try {
         if (item) await api('/api/servicios/' + item.id + '/', { method: 'PATCH', body: JSON.stringify(data) });
         else await api('/api/servicios/', { method: 'POST', body: JSON.stringify(data) });
-        toast(item ? 'Orden actualizada.' : (isClient ? 'Solicitud registrada correctamente.' : 'Orden de servicio creada.'), 'success');
+        toast(item ? 'Orden actualizada.' : (isClient ? 'Solicitud registrada correctamente.' : S.user.role === 'supervisor' ? 'Trabajo creado.' : 'Orden de servicio creada.'), 'success');
         closeModal();
         reloadCurrent();
       } catch (err) { toast(apiErrorMessage(err), 'error'); }
@@ -2773,6 +2928,7 @@
               'Mostrando mantenimientos vencidos (próxima fecha anterior a hoy).</div>';
     }
     var canManage = STAFF_ROLES.indexOf(S.user.role) >= 0;
+    var isTecnico = S.user.role === 'tecnico';
     var columns = [
       { label: 'Equipo', key: 'equipo_nombre' },
       { label: 'Cliente', key: 'cliente_nombre' },
@@ -2781,8 +2937,8 @@
       { label: 'Fecha', render: function (m) { return fmtDate(m.fecha); } },
       { label: 'Próxima fecha', render: function (m) { return m.proxima_fecha ? fmtDate(m.proxima_fecha) : '—'; } },
       { label: 'Estado', render: function (m) { return estadoBadge(m.estado, m.estado_display); } },
-      { label: 'Costo', render: function (m) { return money(m.costo); } },
     ];
+    if (!isTecnico) columns.push({ label: 'Costo', render: function (m) { return money(m.costo); } });
     if (canManage) columns.push({ label: 'Acciones', render: function (m) {
           var btns = [
             { kind: 'icon', action: 'editar', icon: 'edit', title: 'Editar' },
@@ -2803,7 +2959,7 @@
           { name: 'estado', label: 'Estado', value: state.estado, options: ESTADOS_MANTENIMIENTO },
         ],
         buttons: canManage ? [{ action: 'crear', icon: 'add', label: 'Nuevo mantenimiento' }]
-                           : [{ action: 'crear', icon: 'add', label: 'Solicitar mantenimiento' }],
+                           : [],
       },
       columns: columns,
       items: data.results || [],
@@ -2827,6 +2983,7 @@
 
   async function openMantenimientoForm(item) {
     var isClient = S.user.role === 'cliente';
+    var isTecnico = S.user.role === 'tecnico';
     var clientes = [], equipos = [], tecnicos = [];
     try { equipos = await fetchAll('/api/equipos/'); } catch (e) {}
     function equipoLabel(e) {
@@ -2842,6 +2999,12 @@
         { name: 'fecha', label: 'Fecha deseada', type: 'date', required: true, value: item ? item.fecha : new Date().toISOString().slice(0, 10) },
         { name: 'descripcion', label: 'Descripción del mantenimiento', type: 'textarea', span: 2, required: true,
           value: item ? item.descripcion : '', placeholder: 'Describe el equipo y el servicio que necesitas…' },
+      ];
+    } else if (isTecnico) {
+      fields = [
+        { name: 'estado', label: 'Estado', type: 'select', value: item ? item.estado : 'pendiente', options: ESTADOS_MANTENIMIENTO },
+        { name: 'trabajo_realizado', label: 'Trabajo realizado', type: 'textarea', span: 2, value: item ? item.trabajo_realizado : '' },
+        { name: 'observaciones', label: 'Observaciones', type: 'textarea', span: 2, value: item ? item.observaciones : '' },
       ];
     } else {
       try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) {}
@@ -3915,13 +4078,39 @@
 
   /* ---------- TÉCNICOS ---------- */
   function openTecnicoForm(t) {
+    var supervisorPromise = isAdmin() ? fetchAll('/api/supervisores/') : Promise.resolve([]);
+    supervisorPromise.then(function (supervisores) {
+      var fields = [
+        { name: 'supervisor', label: 'Supervisor', type: 'select', value: t.supervisor || '',
+          options: [{ value: '', label: 'Sin supervisor' }].concat(optList(supervisores, 'id', 'nombre')) },
+        { name: 'especialidad', label: 'Especialidad', type: 'text', span: 2, value: t.especialidad },
+        { name: 'telefono', label: 'Teléfono', type: 'tel', value: t.telefono },
+        { name: 'direccion', label: 'Dirección', type: 'text', value: t.direccion },
+        { name: 'disponible', label: 'Disponible para asignaciones', type: 'checkbox', value: !!t.disponible },
+      ];
+      openModal('Editar perfil del técnico', formHTML(fields), {
+        footer: modalFooter('Cancelar', 'Guardar cambios'),
+      });
+      $('#modalForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var btn = e.target.querySelector('[type=submit]');
+        setBusy(btn, true);
+        try {
+          await api('/api/tecnicos/' + t.id + '/', { method: 'PATCH', body: JSON.stringify(getFormData(e.target, ['supervisor'])) });
+          toast('Perfil del técnico actualizado.', 'success');
+          closeModal();
+          reloadCurrent();
+        } catch (err) { toast(apiErrorMessage(err), 'error'); }
+        finally { setBusy(btn, false); }
+      });
+    });
+  }
+
+  function openSupervisorForm(s) {
     var fields = [
-      { name: 'especialidad', label: 'Especialidad', type: 'text', span: 2, value: t.especialidad },
-      { name: 'telefono', label: 'Teléfono', type: 'tel', value: t.telefono },
-      { name: 'direccion', label: 'Dirección', type: 'text', value: t.direccion },
-      { name: 'disponible', label: 'Disponible para asignaciones', type: 'checkbox', value: !!t.disponible },
+      { name: 'telefono', label: 'Teléfono', type: 'tel', value: s.telefono },
     ];
-    openModal('Editar perfil del técnico', formHTML(fields), {
+    openModal('Editar perfil del supervisor', formHTML(fields), {
       footer: modalFooter('Cancelar', 'Guardar cambios'),
     });
     $('#modalForm').addEventListener('submit', async function (e) {
@@ -3929,8 +4118,8 @@
       var btn = e.target.querySelector('[type=submit]');
       setBusy(btn, true);
       try {
-        await api('/api/tecnicos/' + t.id + '/', { method: 'PATCH', body: JSON.stringify(getFormData(e.target)) });
-        toast('Perfil del técnico actualizado.', 'success');
+        await api('/api/supervisores/' + s.id + '/', { method: 'PATCH', body: JSON.stringify(getFormData(e.target)) });
+        toast('Perfil del supervisor actualizado.', 'success');
         closeModal();
         reloadCurrent();
       } catch (err) { toast(apiErrorMessage(err), 'error'); }
@@ -3947,8 +4136,33 @@
     };
   }
 
+  function supervisorToUser(s) {
+    var name = s.nombre || '';
+    var parts = name.split(' ');
+    var first = parts.shift() || '';
+    return {
+      id: s.user, username: s.username, email: s.email,
+      first_name: first, last_name: parts.join(' '), role: 'supervisor', is_active: true,
+    };
+  }
+
+  function supervisoresAction(action, id) {
+    if (action === 'crear') return openUserModal(null, { roleFixed: 'supervisor', title: 'Agregar supervisor' });
+    if (action === 'editar') return getItem('/api/supervisores/' + id + '/').then(openSupervisorForm);
+    if (action === 'editar_usuario') return getItem('/api/supervisores/' + id + '/').then(function (s) {
+      openUserModal(supervisorToUser(s), { title: 'Editar usuario del supervisor' });
+    });
+    if (action === 'eliminar') {
+      if (!confirm('¿Está seguro de que desea eliminar este supervisor? Esta acción no se puede deshacer.')) return;
+      api('/api/supervisores/' + id + '/', { method: 'DELETE' })
+        .then(function () { toast('Supervisor eliminado.', 'success'); reloadCurrent(); })
+        .catch(function (err) { toast(apiErrorMessage(err), 'error'); });
+    }
+  }
+
   function tecnicosAction(action, id) {
     if (action === 'crear') return openUserModal(null, { roleFixed: 'tecnico', title: 'Agregar técnico' });
+    if (action === 'crear_trabajo') return openServicioForm(null);
     if (action === 'editar') return getItem('/api/tecnicos/' + id + '/').then(openTecnicoForm);
     if (action === 'editar_usuario') return getItem('/api/tecnicos/' + id + '/').then(function (t) {
       openUserModal(tecnicoToUser(t), { title: 'Editar usuario del técnico' });
@@ -4569,6 +4783,7 @@
   function onAction(action, id) {
     switch (S.section) {
       case 'clientes': return clientesAction(action, id);
+      case 'supervisores': return supervisoresAction(action, id);
       case 'tecnicos': return tecnicosAction(action, id);
       case 'equipos': return equiposAction(action, id);
       case 'mis_equipos': return misEquiposAction(action, id);
@@ -4593,6 +4808,7 @@
   var renderers = {
     dashboard: renderDashboard,
     clientes: renderClientes,
+    supervisores: renderSupervisores,
     tecnicos: renderTecnicos,
     equipos: renderEquipos,
     mis_equipos: renderMisEquipos,
@@ -4617,21 +4833,22 @@
    * Navegación y secciones
    * ------------------------------------------------------------------ */
   var SECTIONS = {
-    dashboard: { title: 'Dashboard', icon: 'dashboard', subtitle: 'Resumen general del sistema', roles: STAFF_ROLES },
+    dashboard: { title: 'Dashboard', icon: 'dashboard', subtitle: 'Resumen general del sistema', roles: ['administrador', 'supervisor', 'almacen'] },
     clientes: { title: 'Clientes', icon: 'group', subtitle: 'Registro de clientes', roles: ['administrador', 'supervisor'] },
+    supervisores: { title: 'Supervisores', icon: 'supervisor_account', subtitle: 'Gestión de supervisores', roles: ['administrador'] },
     tecnicos: { title: 'Técnicos', icon: 'engineering', subtitle: 'Personal técnico de campo', roles: ['administrador', 'supervisor'] },
-    equipos: { title: 'Productos / Equipos', icon: 'ac_unit', subtitle: 'Equipos de refrigeración y tipos', roles: ['administrador', 'supervisor', 'tecnico'] },
+    equipos: { title: 'Productos / Equipos', icon: 'ac_unit', subtitle: 'Equipos de refrigeración y tipos', roles: ['administrador', 'supervisor'] },
     mis_equipos: { title: 'Mis equipos', icon: 'ac_unit', subtitle: 'Equipos registrados por ti', roles: ['cliente'] },
-    solicitudes: { title: 'Solicitudes', icon: 'assignment', subtitle: 'Solicitudes de instalación', roles: ['administrador', 'supervisor', 'tecnico'] },
+    solicitudes: { title: 'Solicitudes', icon: 'assignment', subtitle: 'Solicitudes de instalación', roles: ['administrador', 'supervisor'] },
     instalaciones: { title: 'Instalaciones', icon: 'home_repair_service', subtitle: 'Agenda de instalaciones', roles: ['administrador', 'supervisor', 'tecnico'] },
     servicios: { title: 'Servicios', icon: 'handyman', subtitle: 'Órdenes de trabajo y servicio', roles: ['administrador', 'supervisor', 'tecnico', 'cliente'] },
     mantenimientos: { title: 'Mantenimientos', icon: 'build', subtitle: 'Preventivos y correctivos de equipos', roles: ['administrador', 'supervisor', 'tecnico', 'cliente'] },
     evaluaciones: { title: 'Calificaciones', icon: 'star', subtitle: 'Evaluaciones de satisfacción del cliente', roles: ['administrador', 'supervisor', 'cliente'] },
     visitas: { title: 'Visitas técnicas', icon: 'home_pin', subtitle: 'Visitas técnicas programadas', roles: ['administrador', 'supervisor', 'tecnico'] },
-    cotizaciones: { title: 'Cotizaciones', icon: 'request_quote', subtitle: 'Cotizaciones de instalación', roles: ['administrador', 'supervisor', 'tecnico'] },
+    cotizaciones: { title: 'Cotizaciones', icon: 'request_quote', subtitle: 'Cotizaciones de instalación', roles: ['administrador', 'supervisor'] },
     agenda: { title: 'Agenda', icon: 'calendar_month', subtitle: 'Calendario y mapa de instalaciones', roles: ['administrador', 'supervisor', 'tecnico'] },
     pagos: { title: 'Pagos', icon: 'payments', subtitle: 'Pagos, abonos y facturas', roles: ['administrador', 'supervisor', 'almacen'] },
-    inventario: { title: 'Inventario', icon: 'inventory_2', subtitle: 'Materiales y movimientos', roles: ['administrador', 'supervisor', 'almacen', 'tecnico'] },
+    inventario: { title: 'Inventario', icon: 'inventory_2', subtitle: 'Materiales y movimientos', roles: ['administrador', 'supervisor', 'almacen'] },
     almacen: { title: 'Almacén', icon: 'storefront', subtitle: 'Productos y categorías de la vitrina', roles: ['administrador', 'supervisor', 'almacen'] },
     tienda: { title: 'Tienda', icon: 'shopping_bag', subtitle: 'Órdenes de compra y pagos del checkout', roles: ['administrador', 'supervisor', 'almacen'] },
     reportes: { title: 'Reportes', icon: 'bar_chart', subtitle: 'Indicadores y desempeño', roles: ['administrador'] },
@@ -4640,7 +4857,7 @@
   };
 
   var SIDEBAR_GROUPS = [
-    { label: 'Principal', icon: 'home', keys: ['dashboard', 'clientes', 'tecnicos', 'mis_equipos'], collapsed: false },
+    { label: 'Principal', icon: 'home', keys: ['dashboard', 'clientes', 'supervisores', 'tecnicos', 'mis_equipos'], collapsed: false },
     { label: 'Operaciones', icon: 'engineering', keys: ['equipos', 'solicitudes', 'instalaciones', 'servicios', 'agenda'], collapsed: false },
     { label: 'Mantenimiento', icon: 'build', keys: ['mantenimientos', 'visitas', 'evaluaciones'], collapsed: false },
     { label: 'Ventas', icon: 'point_of_sale', keys: ['cotizaciones', 'pagos', 'tienda'], collapsed: false },

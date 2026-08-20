@@ -2,7 +2,7 @@ from rest_framework import mixins, viewsets
 from rest_framework.permissions import BasePermission, IsAuthenticated
 
 from apps.core.models import AuditLog, Evidencia, FirmaDigital
-from apps.core.permissions import ALMACEN, has_role, is_admin, is_staff_role
+from apps.core.permissions import ALMACEN, TECNICO, has_role, is_admin, is_staff_role
 from apps.core.serializers import AuditLogSerializer, EvidenciaSerializer, FirmaSerializer
 
 
@@ -11,6 +11,16 @@ class StaffOnlyPermission(BasePermission):
     message = 'Solo el personal interno puede acceder a este recurso.'
 
     def has_permission(self, request, view):
+        return is_staff_role(request.user)
+
+
+class StaffNoDeleteForTecnico(BasePermission):
+    """Personal interno puede acceder; técnicos no pueden eliminar."""
+    message = 'No tienes permisos para realizar esta acción.'
+
+    def has_permission(self, request, view):
+        if request.method == 'DELETE' and has_role(request.user, TECNICO):
+            return False
         return is_staff_role(request.user)
 
 
@@ -27,9 +37,16 @@ class EvidenciaViewSet(
     """
     queryset = Evidencia.objects.select_related('subido_por', 'content_type')
     serializer_class = EvidenciaSerializer
-    permission_classes = [StaffOnlyPermission]
+    permission_classes = [StaffNoDeleteForTecnico]
     filterset_fields = ['content_type', 'object_id', 'fase']
     search_fields = ['descripcion']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if has_role(user, TECNICO):
+            return qs.filter(subido_por=user)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(subido_por=self.request.user)
@@ -48,9 +65,16 @@ class FirmaViewSet(
     """
     queryset = FirmaDigital.objects.select_related('subido_por', 'content_type')
     serializer_class = FirmaSerializer
-    permission_classes = [StaffOnlyPermission]
+    permission_classes = [StaffNoDeleteForTecnico]
     filterset_fields = ['content_type', 'object_id']
     search_fields = ['nombre', 'documento', 'observaciones']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if has_role(user, TECNICO):
+            return qs.filter(subido_por=user)
+        return qs
 
     def perform_create(self, serializer):
         serializer.save(subido_por=self.request.user)

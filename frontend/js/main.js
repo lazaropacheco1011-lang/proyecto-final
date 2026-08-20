@@ -245,7 +245,11 @@
       loadRealStats();
       closeModal('login');
       toast('¡Bienvenido, ' + (data.user.full_name || data.user.username) + '!', 'success');
-      if (data.user && STAFF_ROLES.indexOf(data.user.role) >= 0) {
+      var checkoutReturn = null;
+      try { checkoutReturn = localStorage.getItem('refri_checkout_return'); localStorage.removeItem('refri_checkout_return'); } catch (e) { /* ok */ }
+      if (checkoutReturn) {
+        window.location.href = checkoutReturn;
+      } else if (data.user && STAFF_ROLES.indexOf(data.user.role) >= 0) {
         window.location.href = '/admin-dashboard/';
       }
     } catch (err) {
@@ -297,6 +301,11 @@
       loadRealStats();
       closeModal('register');
       toast('Cuenta creada. ¡Bienvenido, ' + (data.user.full_name || data.user.username) + '!', 'success');
+      var checkoutReturn = null;
+      try { checkoutReturn = localStorage.getItem('refri_checkout_return'); localStorage.removeItem('refri_checkout_return'); } catch (e) { /* ok */ }
+      if (checkoutReturn) {
+        window.location.href = checkoutReturn;
+      }
     } catch (err) {
       setFormMessage('#registerMsg', apiErrorMessage(err), 'error');
     } finally {
@@ -632,4 +641,8 @@
   }
 
   loadRealStats();
+
+  if (new URLSearchParams(location.search).get('open_login') === '1') {
+    openModal('login');
+  }
 })();

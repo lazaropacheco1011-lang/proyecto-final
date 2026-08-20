@@ -27,7 +27,7 @@ class DashboardSerializer(serializers.Serializer):
 
 def _puede_ver_reportes(user):
     return user and user.is_authenticated and user.role in (
-        'administrador', 'supervisor', 'tecnico', 'almacen'
+        'administrador', 'supervisor', 'almacen'
     )
 
 
@@ -41,7 +41,8 @@ class DashboardViewSet(viewsets.ViewSet):
             return Response(
                 {'detail': 'No tienes permisos para consultar el dashboard.'}, status=403
             )
-        return Response(self._resumen())
+        data = self._resumen()
+        return Response(data)
 
     def _resumen(self):
         from apps.notificaciones.services import recordatorios_mantenimiento
@@ -278,6 +279,7 @@ class DashboardViewSet(viewsets.ViewSet):
         """Exporta reportes en PDF o Excel (formato=pdf|xlsx, tipo=general|instalaciones|servicios|materiales|pagos)."""
         if not _puede_ver_reportes(request.user):
             return HttpResponse('Sin permisos.', status=403)
+        tipo = str(request.query_params.get('tipo', 'general')).lower()
         formato = str(request.query_params.get('formato', 'pdf')).lower()
         tipo = str(request.query_params.get('tipo', 'general')).lower()
         titulo, headers, rows = self._datos_exportacion(tipo)

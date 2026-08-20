@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 from rest_framework.response import Response
 
 from apps.clientes.models import Cliente, DireccionInstalacion
@@ -14,6 +14,7 @@ from apps.clientes.serializers import (
 from apps.core.permissions import (
     CLIENTE,
     SUPERVISOR,
+    TECNICO,
     IsAdminOrReadOnly,
     IsAdminOrSupervisor,
     IsOwnerOrAdmin,
@@ -182,6 +183,14 @@ class IsClienteRead(BasePermission):
         return is_admin(request.user) or has_role(request.user, SUPERVISOR, CLIENTE)
 
 
+class DireccionAccess(BasePermission):
+    """Técnicos no acceden a direcciones de instalación."""
+    message = 'Los técnicos no tienen acceso a direcciones de instalación.'
+
+    def has_permission(self, request, view):
+        return not has_role(request.user, TECNICO)
+
+
 class DireccionInstalacionViewSet(viewsets.ModelViewSet):
     """Direcciones de instalación de los clientes (RF-05)."""
     queryset = DireccionInstalacion.objects.select_related('cliente').all()
@@ -192,7 +201,7 @@ class DireccionInstalacionViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == 'destroy':
             return [perm() for perm in (IsAdminOnlyDestroy,)]
-        return [perm() for perm in (IsOwnerOrAdmin,)]
+        return [perm() for perm in (DireccionAccess,)]
 
     def get_queryset(self):
         qs = super().get_queryset()
