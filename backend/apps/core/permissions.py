@@ -115,6 +115,14 @@ class IsAssignedTecnicoOrStaff(BasePermission):
         return bool(getattr(tecnico, 'user_id', None) == user.id)
 
 
+class IsCliente(BasePermission):
+    """Solo permite acceso a usuarios con rol cliente."""
+    message = 'Solo los clientes pueden realizar compras en la tienda.'
+
+    def has_permission(self, request, view):
+        return has_role(request.user, CLIENTE)
+
+
 class NoTecnico(BasePermission):
     """Bloquea acceso a técnicos. Para endpoints financieros."""
     message = 'Los técnicos no tienen acceso a esta información.'

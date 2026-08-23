@@ -10,7 +10,7 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.permissions import ADMIN, ALMACEN, SUPERVISOR, has_role
+from apps.core.permissions import ADMIN, ALMACEN, SUPERVISOR, CLIENTE, has_role, IsCliente
 from apps.tienda import payments
 from apps.tienda.models import Orden, PagoTienda
 from apps.tienda.serializers import OrdenPublicaSerializer, OrdenSerializer
@@ -37,6 +37,7 @@ def _datos_cliente(payload):
     documento = str(payload.get('documento') or '').strip()
     provincia = str(payload.get('provincia') or '').strip()
     sector = str(payload.get('sector') or '').strip()
+    referencia = str(payload.get('referencia') or '').strip()
     if not nombre:
         raise ValidationError('El nombre del cliente es obligatorio.')
     if not email or '@' not in email:
@@ -53,13 +54,15 @@ def _datos_cliente(payload):
         raise ValidationError('La dirección de entrega es obligatoria.')
     if not ciudad:
         raise ValidationError('La ciudad es obligatoria.')
+    if not referencia:
+        raise ValidationError('La referencia de dirección es obligatoria.')
     return {
         'nombre': nombre,
         'email': email,
         'telefono': telefono,
         'direccion': direccion,
         'ciudad': ciudad,
-        'referencia': str(payload.get('referencia') or '').strip(),
+        'referencia': referencia,
         'notas': str(payload.get('notas') or '').strip(),
         'documento': documento,
         'provincia': provincia,
@@ -108,7 +111,7 @@ class CrearOrdenTarjetaView(APIView):
 
     La tarjeta solo se procesa en memoria (nunca se almacena).
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCliente]
 
     def post(self, request):
         payload = request.data or {}
@@ -164,7 +167,7 @@ class CrearOrdenTarjetaView(APIView):
 
 class CrearOrdenPayPalView(APIView):
     """Crea la orden de tienda y la orden de pago en PayPal (sandbox o real)."""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCliente]
 
     def post(self, request):
         payload = request.data or {}
@@ -245,7 +248,7 @@ class CrearOrdenBilleteraView(APIView):
     Este método queda preparado para integrar una billetera digital
     posteriormente; por ahora se registra el pedido y el pago queda pendiente.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsCliente]
 
     def post(self, request):
         payload = request.data or {}

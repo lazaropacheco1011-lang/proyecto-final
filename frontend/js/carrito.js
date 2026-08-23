@@ -154,6 +154,10 @@
   $('#cartSummary').addEventListener('click', function (e) {
     var btn = e.target.closest('[data-pagar]');
     if (!btn) return;
+    if (isStaff()) {
+      toast('Solo los clientes pueden realizar compras.', 'error');
+      return;
+    }
     var token = null;
     try { token = localStorage.getItem('refri_access'); } catch (e) { /* ok */ }
     if (!token) {
@@ -164,8 +168,19 @@
     window.location.href = '/checkout/';
   });
 
-  /* ---------- Sesión (opcional) ---------- */
+  /* ---------- Roles que no deben usar el carrito ---------- */
   var STAFF_ROLES = ['administrador', 'supervisor', 'tecnico', 'almacen'];
+
+  function getUser() {
+    try { return JSON.parse(localStorage.getItem('refri_user')); } catch (e) { return null; }
+  }
+
+  function isStaff() {
+    var u = getUser();
+    return u && STAFF_ROLES.indexOf(u.role) >= 0;
+  }
+
+  /* ---------- Sesión (opcional) ---------- */
   function applySession(user) {
     var area = $('#sessionArea');
     if (!user) {
@@ -200,6 +215,22 @@
 
   /* ---------- Arranque ---------- */
   (async function init() {
+    if (isStaff()) {
+      toast('El carrito de compras está disponible solo para clientes.', 'error');
+      var itemsBox = $('#cartItems');
+      if (itemsBox) {
+        itemsBox.innerHTML = '<div class="flex flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-outline bg-white py-20 text-center">' +
+          '<span class="material-symbols-outlined text-6xl text-error">block</span>' +
+          '<h2 class="font-headline-md text-headline-md font-bold text-on-surface">Acceso no disponible</h2>' +
+          '<p class="max-w-sm text-sm text-on-surface-variant">El carrito de compras está disponible únicamente para clientes.</p>' +
+          '<a href="/admin-dashboard/" class="mt-2 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-label-md text-white transition-colors hover:bg-primary-hover">' +
+            '<span class="material-symbols-outlined">dashboard</span> Ir al panel</a>' +
+        '</div>';
+      }
+      var summaryBox = $('#cartSummary');
+      if (summaryBox) summaryBox.innerHTML = '';
+      return;
+    }
     await loadConfig();
     render();
   })();

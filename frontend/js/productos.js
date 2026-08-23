@@ -286,6 +286,8 @@
   }
 
   function productAction(p) {
+    var esStaff = currentUser && STAFF_ROLES.indexOf(currentUser.role) >= 0;
+    if (esStaff) return '';
     var icon, label, cls;
     if (p.agotado) {
       icon = 'remove_circle'; label = 'Agotado';
@@ -571,12 +573,18 @@
     $('#prodQty').value = '1';
     $('#prodGoCart').classList.add('hidden');
     var cta = $('#prodCta');
-    cta.disabled = !hasPrecio || p.agotado;
-    cta.classList.toggle('opacity-40', cta.disabled);
-    cta.classList.toggle('cursor-not-allowed', cta.disabled);
-    cta.querySelector('span.material-symbols-outlined').textContent =
-      (!hasPrecio ? 'query_stats' : (p.agotado ? 'remove_circle' : 'add_shopping_cart'));
-    cta.lastChild.textContent = ' ' + (!hasPrecio ? 'Consultar precio' : (p.agotado ? 'Sin stock' : 'Agregar al carrito'));
+    var esStaff = currentUser && STAFF_ROLES.indexOf(currentUser.role) >= 0;
+    if (esStaff) {
+      cta.classList.add('hidden');
+    } else {
+      cta.classList.remove('hidden');
+      cta.disabled = !hasPrecio || p.agotado;
+      cta.classList.toggle('opacity-40', cta.disabled);
+      cta.classList.toggle('cursor-not-allowed', cta.disabled);
+      cta.querySelector('span.material-symbols-outlined').textContent =
+        (!hasPrecio ? 'query_stats' : (p.agotado ? 'remove_circle' : 'add_shopping_cart'));
+      cta.lastChild.textContent = ' ' + (!hasPrecio ? 'Consultar precio' : (p.agotado ? 'Sin stock' : 'Agregar al carrito'));
+    }
     currentProduct = p;
     openModal('producto');
   }
@@ -601,6 +609,8 @@
 
   $('#prodCta').addEventListener('click', function () {
     if (!currentProduct) return;
+    var esStaff = currentUser && STAFF_ROLES.indexOf(currentUser.role) >= 0;
+    if (esStaff) { toast('Solo los clientes pueden agregar productos al carrito.', 'error'); return; }
     var p = currentProduct;
     var pricing = productPricing(p);
     if (pricing.final == null || p.agotado) return;

@@ -8,6 +8,14 @@
   'use strict';
 
   var KEY = 'refri_cart';
+  var STAFF_ROLES = ['administrador', 'supervisor', 'tecnico', 'almacen'];
+
+  function isStaff() {
+    try {
+      var u = JSON.parse(localStorage.getItem('refri_user'));
+      return u && STAFF_ROLES.indexOf(u.role) >= 0;
+    } catch (e) { return false; }
+  }
 
   function read() {
     try {
@@ -29,6 +37,7 @@
     items: function () { return read(); },
 
     add: function (producto, cantidad) {
+      if (isStaff()) return read();
       var items = read();
       var qty = Math.max(1, parseInt(cantidad, 10) || 1);
       var found = false;

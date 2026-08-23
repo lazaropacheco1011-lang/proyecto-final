@@ -171,16 +171,53 @@
   }
 
   function validarDatos() {
-    if (!$('#coNombre').value.trim()) return 'Ingresa tu nombre completo.';
-    if (!/^\S+@\S+\.\S+$/.test($('#coEmail').value.trim())) return 'Ingresa un correo electrónico válido.';
-    if (!$('#coTelefono').value.trim()) return 'Ingresa tu teléfono de contacto.';
-    if (!$('#coDocumento').value.trim()) return 'Ingresa tu documento o RNC.';
-    if (!$('#coProvincia').value.trim()) return 'Selecciona tu provincia.';
-    if (!$('#coSector').value.trim()) return 'Ingresa tu sector.';
-    if (!$('#coCiudad').value.trim()) return 'Ingresa tu ciudad.';
-    if (!$('#coDireccion').value.trim()) return 'Ingresa tu dirección de entrega.';
-    return '';
+    var campos = [
+      { id: 'coNombre', msg: 'El nombre completo es obligatorio.' },
+      { id: 'coDocumento', msg: 'El documento / RNC es obligatorio.' },
+      { id: 'coTelefono', msg: 'El teléfono es obligatorio.' },
+      { id: 'coEmail', msg: 'El correo electrónico es obligatorio.' },
+      { id: 'coProvincia', msg: 'La provincia es obligatoria.' },
+      { id: 'coSector', msg: 'El sector es obligatorio.' },
+      { id: 'coCiudad', msg: 'La ciudad es obligatoria.' },
+      { id: 'coDireccion', msg: 'La dirección de entrega es obligatoria.' },
+      { id: 'coReferencia', msg: 'La referencia de dirección es obligatoria.' },
+    ];
+    var errores = [];
+    campos.forEach(function (c) {
+      var el = document.getElementById(c.id);
+      if (!el) return;
+      var val = el.value.trim();
+      var invalid = !val;
+      if (c.id === 'coEmail' && val && !/^\S+@\S+\.\S+$/.test(val)) invalid = true;
+      el.classList.toggle('border-error', invalid);
+      el.classList.toggle('bg-red-50', invalid);
+      if (invalid) errores.push(c.msg);
+    });
+    return errores;
   }
+
+  function limpiarErrores() {
+    $$('.input').forEach(function (el) {
+      el.classList.remove('border-error', 'bg-red-50');
+    });
+  }
+
+  ['#coNombre', '#coDocumento', '#coTelefono', '#coEmail', '#coProvincia',
+   '#coSector', '#coCiudad', '#coDireccion', '#coReferencia'].forEach(function (sel) {
+    var el = $(sel);
+    if (el) el.addEventListener('input', function () {
+      if (el.classList.contains('border-error')) {
+        el.classList.remove('border-error', 'bg-red-50');
+      }
+    });
+    if (el && el.tagName === 'SELECT') {
+      el.addEventListener('change', function () {
+        if (el.classList.contains('border-error')) {
+          el.classList.remove('border-error', 'bg-red-50');
+        }
+      });
+    }
+  });
 
   function payloadDatos() {
     return {
@@ -242,8 +279,14 @@
 
   $('#checkoutForm').addEventListener('submit', async function (e) {
     e.preventDefault();
+    limpiarErrores();
     var errores = validarDatos();
-    if (errores) { setMsg(errores, 'error'); return; }
+    if (errores.length) {
+      setMsg('Completa los campos obligatorios: ' + errores.join(' · '), 'error');
+      var primerError = $('#checkoutForm').querySelector('.border-error');
+      if (primerError) primerError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
 
     if (!window.Cart.items().length) {
       setMsg('Tu carrito está vacío.', 'error');
@@ -343,6 +386,14 @@
       try { localStorage.setItem('refri_checkout_return', '/checkout/'); } catch (e) { /* ok */ }
       toast('Debes iniciar sesión para continuar con la compra.', 'error');
       setTimeout(function () { window.location.href = '/'; }, 800);
+      return;
+    }
+    var STAFF_ROLES = ['administrador', 'supervisor', 'tecnico', 'almacen'];
+    var user = null;
+    try { user = JSON.parse(localStorage.getItem('refri_user')); } catch (e) { /* ok */ }
+    if (user && STAFF_ROLES.indexOf(user.role) >= 0) {
+      toast('Solo los clientes pueden realizar compras en la tienda.', 'error');
+      setTimeout(function () { window.location.href = '/productos/'; }, 800);
       return;
     }
     await loadConfig();
