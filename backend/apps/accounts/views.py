@@ -28,6 +28,7 @@ from apps.accounts.serializers import (
     PasswordResetConfirmSerializer,
     RegisterSerializer,
     SupervisorSerializer,
+    TecnicoMinSerializer,
     TecnicoSerializer,
     UserCreateSerializer,
     UserSerializer,
@@ -453,6 +454,21 @@ class TecnicoViewSet(viewsets.ModelViewSet):
         instance.delete()
         if usuario and usuario.pk and usuario != self.request.user:
             usuario.delete()
+
+    @action(detail=False, methods=['get'])
+    def disponibles(self, request):
+        """Lista ligera de técnicos para campos de selección."""
+        qs = self.get_queryset().order_by('user__first_name', 'user__last_name')
+        search = request.query_params.get('search', '').strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(
+                Q(user__first_name__icontains=search)
+                | Q(user__last_name__icontains=search)
+                | Q(user__username__icontains=search)
+                | Q(especialidad__icontains=search)
+            )
+        return Response(TecnicoMinSerializer(qs[:200], many=True).data)
 
 
 class SupervisorViewSet(viewsets.ModelViewSet):

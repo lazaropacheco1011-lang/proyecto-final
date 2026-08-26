@@ -305,6 +305,7 @@
     setInterval(refreshNotifBadge, 60000);
   }
 
+
   /* ------------------------------------------------------------------
    * Exportar reportes (PDF / Excel)
    * ------------------------------------------------------------------ */
@@ -378,9 +379,10 @@
   function toolbarHTML(opts) {
     var html = '<div class="flex flex-col gap-3 sm:flex-row sm:items-center">';
     html += '<div class="relative w-full sm:max-w-xs">';
-    html += '<span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-on-surface-variant">search</span>';
+    html += '<span data-search-icon class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 cursor-pointer text-sm text-on-surface-variant">search</span>';
     html += '<input data-search class="adm-input pl-9" placeholder="' + esc(opts.placeholder || 'Buscar…') +
             '" value="' + esc(opts.search || '') + '">';
+    html += '<div data-search-dropdown class="absolute left-0 top-full z-50 mt-1 hidden w-full max-h-64 overflow-y-auto rounded-xl border border-outline-variant bg-white shadow-lg"></div>';
     html += '</div>';
     if (opts.filters && opts.filters.length) {
       html += '<div class="flex flex-wrap items-center gap-2">';
@@ -927,11 +929,21 @@
    * CLIENTES
    * ------------------------------------------------------------------ */
   async function renderClientes() {
+    sdCache = {};
     setViewLoading();
     var state = st('clientes', { tipo: '', tipo_documento: '' });
+    var qs = ['page=' + (state.page || 1)];
+    if (state.search) qs.push('search=' + encodeURIComponent(state.search));
+    if (state.tipo) qs.push('tipo=' + encodeURIComponent(state.tipo));
+    if (state.tipo_documento) qs.push('tipo_documento=' + encodeURIComponent(state.tipo_documento));
+    var token = localStorage.getItem('refri_access');
     var data;
     try {
-      data = await loadList('/api/clientes/', state, ['tipo', 'tipo_documento']);
+      var res = await fetch(API_BASE + '/api/clientes/?' + qs.join('&'), {
+        headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+      });
+      if (!res.ok) throw new Error('Error ' + res.status);
+      data = await res.json();
     } catch (err) {
       setViewError(apiErrorMessage(err));
       return;
@@ -984,6 +996,7 @@
    * TÉCNICOS
    * ------------------------------------------------------------------ */
   async function renderTecnicos() {
+    sdCache = {};
     setViewLoading();
     var state = st('tecnicos', { disponible: '' });
     var data;
@@ -1044,6 +1057,7 @@
    * SUPERVISORES
    * ------------------------------------------------------------------ */
   async function renderSupervisores() {
+    sdCache = {};
     setViewLoading();
     var state = st('supervisores', {});
     var data;
@@ -1090,6 +1104,7 @@
    * PRODUCTOS / EQUIPOS
    * ------------------------------------------------------------------ */
   async function renderEquipos() {
+    sdCache = {};
     setViewLoading();
     var state = st('equipos', { estado: '' });
     var data;
@@ -1149,6 +1164,7 @@
    * MIS EQUIPOS (portal del cliente)
    * ------------------------------------------------------------------ */
   async function renderMisEquipos() {
+    sdCache = {};
     setViewLoading();
     var state = st('mis_equipos', {});
     var data;
@@ -1229,6 +1245,7 @@
    * SOLICITUDES
    * ------------------------------------------------------------------ */
   async function renderSolicitudes() {
+    sdCache = {};
     setViewLoading();
     var state = st('solicitudes', { estado: '', prioridad: '' });
     var data;
@@ -1281,6 +1298,7 @@
    * INSTALACIONES
    * ------------------------------------------------------------------ */
   async function renderInstalaciones() {
+    sdCache = {};
     setViewLoading();
     var state = st('instalaciones', { estado: '' });
     var data;
@@ -1870,6 +1888,7 @@
   }
 
   async function renderPagos() {
+    sdCache = {};
     setViewLoading();
     var state = st('pagos', { tab: 'pagos', estado: '', metodo: '' });
     var html = tabsHTML(state, [
@@ -1963,6 +1982,7 @@
    * INVENTARIO
    * ------------------------------------------------------------------ */
   async function renderInventario() {
+    sdCache = {};
     setViewLoading();
     var state = st('inventario', { tab: 'materiales', categoria: '', unidad_medida: '' });
     var html = tabsHTML(state, [
@@ -2067,6 +2087,7 @@
    * ALMACÉN / VITRINA
    * ------------------------------------------------------------------ */
   async function renderAlmacen() {
+    sdCache = {};
     setViewLoading();
     var state = st('almacen', { tab: 'productos', categoria: '', disponible: '' });
     var tabs = [
@@ -2359,6 +2380,7 @@
   }
 
   async function renderTienda() {
+    sdCache = {};
     setViewLoading();
     var state = st('tienda', { tab: 'ordenes', estado: '', metodo: '' });
     var html = tabsHTML(state, [
@@ -2636,6 +2658,7 @@
   ];
 
   async function renderServicios() {
+    sdCache = {};
     setViewLoading();
     var state = st('servicios', { estado: '', tipo_servicio: '' });
     var data;
@@ -2906,6 +2929,7 @@
   ];
 
   async function renderMantenimientos() {
+    sdCache = {};
     setViewLoading();
     var state = st('mantenimientos', { estado: '', tipo: '' });
     var flag = state.proximos ? 'proximos' : (state.vencidos ? 'vencidos' : '');
@@ -3059,6 +3083,7 @@
    * EVALUACIONES / CALIFICACIONES
    * ------------------------------------------------------------------ */
   async function renderEvaluaciones() {
+    sdCache = {};
     setViewLoading();
     if (S.user.role === 'cliente') return renderMisEvaluaciones();
     var state = st('evaluaciones', { calificacion: '' });
@@ -3280,6 +3305,7 @@
    * USUARIOS Y ROLES
    * ------------------------------------------------------------------ */
   async function renderUsuarios() {
+    sdCache = {};
     setViewLoading();
     var state = st('usuarios', { role: '' });
     var data;
@@ -3602,6 +3628,7 @@
   ];
 
   async function renderVisitas() {
+    sdCache = {};
     setViewLoading();
     var state = st('visitas', { estado: '' });
     var data;
@@ -3716,6 +3743,7 @@
   ];
 
   async function renderCotizaciones() {
+    sdCache = {};
     setViewLoading();
     var state = st('cotizaciones', { estado: '' });
     var data;
@@ -4078,7 +4106,7 @@
 
   /* ---------- TÉCNICOS ---------- */
   function openTecnicoForm(t) {
-    var supervisorPromise = isAdmin() ? fetchAll('/api/supervisores/') : Promise.resolve([]);
+    var supervisorPromise = (isAdmin() || isSupervisor()) ? fetchAll('/api/supervisores/') : Promise.resolve([]);
     supervisorPromise.then(function (supervisores) {
       var fields = [
         { name: 'supervisor', label: 'Supervisor', type: 'select', value: t.supervisor || '',
@@ -4088,6 +4116,10 @@
         { name: 'direccion', label: 'Dirección', type: 'text', value: t.direccion },
         { name: 'disponible', label: 'Disponible para asignaciones', type: 'checkbox', value: !!t.disponible },
       ];
+      if (isAdmin()) {
+        fields.push({ name: 'password', label: 'Nueva contraseña', type: 'password', value: '',
+          placeholder: 'Dejar vacía para no cambiar' });
+      }
       openModal('Editar perfil del técnico', formHTML(fields), {
         footer: modalFooter('Cancelar', 'Guardar cambios'),
       });
@@ -4096,7 +4128,13 @@
         var btn = e.target.querySelector('[type=submit]');
         setBusy(btn, true);
         try {
-          await api('/api/tecnicos/' + t.id + '/', { method: 'PATCH', body: JSON.stringify(getFormData(e.target, ['supervisor'])) });
+          var data = getFormData(e.target, ['supervisor']);
+          var pw = data.password || '';
+          delete data.password;
+          await api('/api/tecnicos/' + t.id + '/', { method: 'PATCH', body: JSON.stringify(data) });
+          if (pw) {
+            await api('/api/usuarios/' + t.user + '/', { method: 'PATCH', body: JSON.stringify({ password: pw }) });
+          }
           toast('Perfil del técnico actualizado.', 'success');
           closeModal();
           reloadCurrent();
@@ -4110,6 +4148,10 @@
     var fields = [
       { name: 'telefono', label: 'Teléfono', type: 'tel', value: s.telefono },
     ];
+    if (isAdmin()) {
+      fields.push({ name: 'password', label: 'Nueva contraseña', type: 'password', value: '',
+        placeholder: 'Dejar vacía para no cambiar' });
+    }
     openModal('Editar perfil del supervisor', formHTML(fields), {
       footer: modalFooter('Cancelar', 'Guardar cambios'),
     });
@@ -4118,7 +4160,13 @@
       var btn = e.target.querySelector('[type=submit]');
       setBusy(btn, true);
       try {
-        await api('/api/supervisores/' + s.id + '/', { method: 'PATCH', body: JSON.stringify(getFormData(e.target)) });
+        var data = getFormData(e.target);
+        var pw = data.password || '';
+        delete data.password;
+        await api('/api/supervisores/' + s.id + '/', { method: 'PATCH', body: JSON.stringify(data) });
+        if (pw) {
+          await api('/api/usuarios/' + s.user + '/', { method: 'PATCH', body: JSON.stringify({ password: pw }) });
+        }
         toast('Perfil del supervisor actualizado.', 'success');
         closeModal();
         reloadCurrent();
@@ -5027,7 +5075,189 @@
   $('#userCard').addEventListener('click', function () { go('perfil'); });
   $('#refreshBtn').addEventListener('click', function () { reloadCurrent(); });
 
+  var sdCache = {};
+  var sdCacheTimer = null;
+
+  var SD_CONFIG = {
+    clientes:      { url: '/api/clientes/disponibles/?search=', nameField: 'nombre_completo', subField: 'documento_numero', emptyText: 'No se encontraron clientes' },
+    tecnicos:      { url: '/api/tecnicos/disponibles/?search=', nameField: 'nombre', subField: 'especialidad', emptyText: 'No se encontraron técnicos' },
+    supervisores:  { url: '/api/supervisores/?search=', nameField: 'nombre', subField: 'email', emptyText: 'No se encontraron supervisores' },
+    equipos:       { url: '/api/equipos/?search=', nameField: 'cliente_nombre', subField: 'marca', emptyText: 'No se encontraron equipos' },
+    solicitudes:   { url: '/api/solicitudes/?search=', nameField: 'cliente_nombre', subField: 'tipo_equipo_solicitado', emptyText: 'No se encontraron solicitudes' },
+    instalaciones: { url: '/api/instalaciones/?search=', nameField: 'cliente_nombre', subField: 'equipo_nombre', emptyText: 'No se encontraron instalaciones' },
+    servicios:     { url: '/api/servicios/?search=', nameField: 'numero', subField: 'cliente_nombre', emptyText: 'No se encontraron servicios' },
+    mantenimientos:{ url: '/api/mantenimientos/?search=', nameField: 'equipo_nombre', subField: 'cliente_nombre', emptyText: 'No se encontraron mantenimientos' },
+    evaluaciones:  { url: '/api/evaluaciones/?search=', nameField: 'cliente_nombre', subField: 'calificacion', emptyText: 'No se encontraron calificaciones' },
+    usuarios:      { url: '/api/usuarios/?search=', nameField: 'full_name', subField: 'email', emptyText: 'No se encontraron usuarios' },
+    visitas:       { url: '/api/visitas/?search=', nameField: 'numero', subField: 'cliente_nombre', emptyText: 'No se encontraron visitas' },
+    cotizaciones:  { url: '/api/cotizaciones/?search=', nameField: 'numero', subField: 'cliente_nombre', emptyText: 'No se encontraron cotizaciones' },
+    pagos: {
+      facturas: { url: '/api/facturas/?search=', nameField: 'numero', subField: 'cliente_nombre', emptyText: 'No se encontraron facturas' },
+      pagos:    { url: '/api/pagos/?search=', nameField: 'referencia', subField: 'cliente_nombre', emptyText: 'No se encontraron pagos' }
+    },
+    inventario: {
+      materiales:  { url: '/api/materiales/?search=', nameField: 'nombre', subField: 'codigo', emptyText: 'No se encontraron materiales' },
+      movimientos: { url: '/api/movimientos/?search=', nameField: 'material_nombre', subField: 'motivo', emptyText: 'No se encontraron movimientos' }
+    },
+    almacen: {
+      productos:  { url: '/api/productos/?search=', nameField: 'nombre', subField: 'categoria', emptyText: 'No se encontraron productos' },
+      categorias: { url: '/api/categorias/?search=', nameField: 'nombre', subField: 'descripcion', emptyText: 'No se encontraron categorías' },
+      historial:  { url: '/api/movimientos/?search=', nameField: 'material_nombre', subField: 'motivo', emptyText: 'No se encontraron registros' }
+    },
+    tienda: {
+      ordenes: { url: '/api/tienda/ordenes/?search=', nameField: 'numero', subField: 'nombre_cliente', emptyText: 'No se encontraron órdenes' },
+      pagos:   { url: '/api/tienda/ordenes/?search=', nameField: 'numero', subField: 'nombre_cliente', emptyText: 'No se encontraron pagos' }
+    }
+  };
+
+  function sdConfig() {
+    var sec = SD_CONFIG[S.section];
+    if (!sec) return null;
+    if (sec.url) return sec;
+    var s = currentListState();
+    var tab = (s && s.tab) || Object.keys(sec)[0];
+    return sec[tab] || null;
+  }
+
+  function sdCacheKey() {
+    var sec = SD_CONFIG[S.section];
+    if (!sec) return null;
+    if (sec.url) return S.section;
+    var s = currentListState();
+    var tab = (s && s.tab) || Object.keys(sec)[0];
+    return S.section + ':' + tab;
+  }
+
+  function sdFetchAll(baseUrl, search) {
+    var token = localStorage.getItem('refri_access');
+    var headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+    var out = [];
+    var page = 1;
+    function fetchPage() {
+      var sep = baseUrl.indexOf('?') >= 0 ? '&' : '?';
+      var url = baseUrl + sep + 'page=' + page;
+      if (search) url += '&search=' + encodeURIComponent(search);
+      return fetch(url, { headers: headers })
+        .then(function (r) { return r.ok ? r.json() : { results: [] }; })
+        .then(function (data) {
+          var results = Array.isArray(data) ? data : (data.results || []);
+          out = out.concat(results);
+          var next = Array.isArray(data) ? null : data.next;
+          if (next && results.length && page < 10) {
+            page++;
+            return fetchPage();
+          }
+          return out;
+        });
+    }
+    return fetchPage();
+  }
+
+  function renderSearchDropdown(drop, list, query, cfg) {
+    cfg = cfg || sdConfig();
+    var q = query.toLowerCase();
+    var filtered = q ? list.filter(function (c) {
+      return (c[cfg.nameField] || '').toLowerCase().indexOf(q) >= 0 ||
+             (c[cfg.subField] || '').toLowerCase().indexOf(q) >= 0 ||
+             (c.email || '').toLowerCase().indexOf(q) >= 0;
+    }) : list;
+    if (!filtered.length) {
+      drop.innerHTML = '<div class="sd-empty">' + esc(cfg.emptyText) + '</div>';
+    } else {
+      drop.innerHTML = filtered.map(function (c) {
+        return '<button type="button" data-sd-id="' + c.id + '">' +
+          '<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-container text-[11px] font-bold text-primary">' +
+            esc((c[cfg.nameField] || '?').charAt(0).toUpperCase()) + '</span>' +
+          '<span class="min-w-0 flex-1 truncate"><span class="sd-name">' + esc(c[cfg.nameField]) + '</span>' +
+            (c[cfg.subField] ? ' <span class="sd-sub">' + esc(c[cfg.subField]) + '</span>' : '') + '</span></button>';
+      }).join('');
+    }
+    drop.classList.remove('hidden');
+  }
+
+  function filterSearchDropdown(drop, query, cfg) {
+    cfg = cfg || sdConfig();
+    var key = sdCacheKey();
+    var list = (key && sdCache[key]) || sdCache;
+    if (!Array.isArray(list)) list = [];
+    var q = query.toLowerCase();
+    var filtered = q ? list.filter(function (c) {
+      return (c[cfg.nameField] || '').toLowerCase().indexOf(q) >= 0 ||
+             (c[cfg.subField] || '').toLowerCase().indexOf(q) >= 0 ||
+             (c.email || '').toLowerCase().indexOf(q) >= 0;
+    }) : list;
+    if (!filtered.length) {
+      drop.innerHTML = '<div class="sd-empty">' + esc(cfg.emptyText) + '</div>';
+    } else {
+      drop.innerHTML = filtered.map(function (c) {
+        return '<button type="button" data-sd-id="' + c.id + '">' +
+          '<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-container text-[11px] font-bold text-primary">' +
+            esc((c[cfg.nameField] || '?').charAt(0).toUpperCase()) + '</span>' +
+          '<span class="min-w-0 flex-1 truncate"><span class="sd-name">' + esc(c[cfg.nameField]) + '</span>' +
+            (c[cfg.subField] ? ' <span class="sd-sub">' + esc(c[cfg.subField]) + '</span>' : '') + '</span></button>';
+      }).join('');
+    }
+    drop.classList.remove('hidden');
+  }
+
   $('#view').addEventListener('click', function (e) {
+    var icon = e.target.closest('[data-search-icon]');
+    if (icon) {
+      var wrap = icon.closest('.relative');
+      var input = wrap ? wrap.querySelector('[data-search]') : null;
+      var drop = wrap ? wrap.querySelector('[data-search-dropdown]') : null;
+      if (!input || !drop) return;
+      var cfg = sdConfig();
+      var key = sdCacheKey();
+      if (!cfg || !key) { drop.classList.add('hidden'); return; }
+      if (drop.classList.contains('hidden')) {
+        if (input.value.trim()) {
+          input.value = '';
+          var s = currentListState();
+          if (s) { s.search = ''; s.page = 1; reloadCurrent(); }
+        }
+        if (sdCache[key] && sdCache[key].length) {
+          renderSearchDropdown(drop, sdCache[key], '', cfg);
+          input.focus();
+        } else {
+          drop.innerHTML = '<div class="sd-empty">Cargando…</div>';
+          drop.classList.remove('hidden');
+          sdFetchAll(API_BASE + cfg.url.split('?')[0]).then(function (list) {
+            sdCache[key] = list;
+            if (drop.classList.contains('hidden')) return;
+            renderSearchDropdown(drop, list, '', cfg);
+          }).catch(function () {
+            drop.innerHTML = '<div class="sd-empty">Error al cargar</div>';
+          });
+          input.focus();
+        }
+      } else {
+        drop.classList.add('hidden');
+        input.focus();
+      }
+      return;
+    }
+    if (!e.target.closest('[data-search-dropdown]')) {
+      var d = document.querySelector('#view [data-search-dropdown]');
+      if (d) d.classList.add('hidden');
+    }
+    var cliItem = e.target.closest('[data-search-dropdown] [data-sd-id]');
+    if (cliItem) {
+      var wrap = cliItem.closest('.relative');
+      var input = wrap ? wrap.querySelector('[data-search]') : null;
+      var drop = wrap ? wrap.querySelector('[data-search-dropdown]') : null;
+      if (input) {
+        var cName = '';
+        var cId = cliItem.dataset.sdId;
+        var nameEl = cliItem.querySelector('.sd-name');
+        if (nameEl) cName = nameEl.textContent;
+        input.value = cName;
+        if (drop) drop.classList.add('hidden');
+        var s = currentListState();
+        if (s) { s.search = cName; s.page = 1; reloadCurrent(); }
+      }
+      return;
+    }
     var mod = e.target.closest('[data-module]');
     if (mod) { goToModule(mod.dataset.module); return; }
     var btn = e.target.closest('[data-action]');
@@ -5054,14 +5284,46 @@
   var searchTimer = null;
   $('#view').addEventListener('input', function (e) {
     if (!e.target.matches('[data-search]')) return;
+    var val = e.target.value;
+    var cfg = sdConfig();
+    var key = sdCacheKey();
+    var wrap = e.target.closest('.relative');
+    var drop = wrap ? wrap.querySelector('[data-search-dropdown]') : null;
+    if (drop && cfg && key) {
+      if (sdCache[key] && sdCache[key].length) {
+        filterSearchDropdown(drop, val, cfg);
+      } else if (val.trim().length >= 2) {
+        clearTimeout(sdCacheTimer);
+        sdCacheTimer = setTimeout(function () {
+          sdFetchAll(API_BASE + cfg.url.split('?')[0], val.trim()).then(function (list) {
+            if (key) sdCache[key] = list;
+            if (list.length) renderSearchDropdown(drop, list, val, cfg);
+            else drop.classList.add('hidden');
+          }).catch(function () {});
+        }, 300);
+      } else {
+        drop.classList.add('hidden');
+      }
+    }
     clearTimeout(searchTimer);
     searchTimer = setTimeout(function () {
       var s = currentListState();
       if (!s) return;
-      s.search = e.target.value;
+      s.search = val;
       s.page = 1;
       reloadCurrent();
     }, 350);
+  });
+
+  $('#view').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && e.target.matches('[data-search]')) e.preventDefault();
+    if (e.key === 'Escape' && e.target.matches('[data-search]')) {
+      var drop = e.target.closest('.relative');
+      if (drop) {
+        var dd = drop.querySelector('[data-search-dropdown]');
+        if (dd) dd.classList.add('hidden');
+      }
+    }
   });
 
   $('#view').addEventListener('change', function (e) {

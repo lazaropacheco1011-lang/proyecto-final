@@ -323,6 +323,7 @@
     '</svg>';
 
   function productWhatsApp(p) {
+    if (currentUser && STAFF_ROLES.indexOf(currentUser.role) >= 0) return '';
     var wa = window.REFRI_WHATSAPP || { number: '18091234567' };
     var msg = 'Hola, estoy interesado en el producto: ' + p.nombre + '.';
     var href = 'https://wa.me/' + wa.number + '?text=' + encodeURIComponent(msg);

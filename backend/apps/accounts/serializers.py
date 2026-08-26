@@ -420,7 +420,7 @@ class PasswordChangeSerializer(serializers.Serializer):
 
 class TecnicoSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
-    nombre = serializers.CharField(source='user.get_full_name', read_only=True)
+    nombre = serializers.SerializerMethodField()
     email = serializers.EmailField(source='user.email', read_only=True)
     rol = serializers.CharField(source='user.get_role_display', read_only=True)
     supervisor_nombre = serializers.SerializerMethodField()
@@ -439,6 +439,9 @@ class TecnicoSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {'telefono': {'allow_blank': True}}
 
+    def get_nombre(self, obj):
+        return obj.user.get_full_name() or obj.user.username
+
     def get_supervisor_nombre(self, obj):
         if obj.supervisor and obj.supervisor.user:
             return obj.supervisor.user.get_full_name() or obj.supervisor.user.username
@@ -450,9 +453,19 @@ class TecnicoSerializer(serializers.ModelSerializer):
         return value
 
 
+class TecnicoMinSerializer(serializers.ModelSerializer):
+    """Representación ligera para listas de selección de técnicos."""
+    nombre = serializers.CharField(source='user.get_full_name', read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+
+    class Meta:
+        model = Tecnico
+        fields = ['id', 'nombre', 'email', 'especialidad']
+
+
 class SupervisorSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
-    nombre = serializers.CharField(source='user.get_full_name', read_only=True)
+    nombre = serializers.SerializerMethodField()
     email = serializers.EmailField(source='user.email', read_only=True)
     rol = serializers.CharField(source='user.get_role_display', read_only=True)
     tecnicos_count = serializers.SerializerMethodField()
@@ -468,6 +481,9 @@ class SupervisorSerializer(serializers.ModelSerializer):
             'id', 'user', 'username', 'nombre', 'email', 'rol',
             'tecnicos_count', 'created_at', 'updated_at',
         ]
+
+    def get_nombre(self, obj):
+        return obj.user.get_full_name() or obj.user.username
 
     def get_tecnicos_count(self, obj):
         return obj.tecnicos.count()

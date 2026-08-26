@@ -888,3 +888,32 @@ body {
   font-weight: 800;
   line-height: 1;
 }
+
+[data-search-dropdown] button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+[data-search-dropdown] button:hover {
+  background-color: #F1F5F9;
+}
+[data-search-dropdown] .sd-name {
+  font-weight: 600;
+  color: #0F172A;
+}
+[data-search-dropdown] .sd-sub {
+  font-size: 11px;
+  color: #475569;
+}
+[data-search-dropdown] .sd-empty {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: #475569;
+}

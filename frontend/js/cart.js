@@ -120,5 +120,15 @@
     return Array.prototype.slice.call((root || document).querySelectorAll(sel));
   }
 
-  document.addEventListener('DOMContentLoaded', renderCartBadges);
+  document.addEventListener('DOMContentLoaded', function () {
+    renderCartBadges();
+    if (isStaff()) {
+      var nav = document.querySelector('nav');
+      if (nav) {
+        $$('a[href="/carrito/"]', nav).forEach(function (el) {
+          el.style.display = 'none';
+        });
+      }
+    }
+  });
 })();
