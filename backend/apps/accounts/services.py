@@ -1,6 +1,8 @@
 """Servicios de recuperación y cambio de contraseña."""
 import hashlib
+import logging
 import secrets
+import smtplib
 from datetime import timedelta
 
 from django.conf import settings
@@ -11,6 +13,12 @@ from django.utils import timezone
 from apps.accounts.models import PasswordResetToken
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
+
+
+class CorreoNoEnviado(Exception):
+    """Se lanza cuando el envío real del correo falla (infraestructura)."""
 
 
 def _hash_token(token):
@@ -67,22 +75,54 @@ def enviar_correo_recuperacion(email):
         correo=email.strip(),
     )
     nombre = user.get_full_name() or user.username
+    try:
+        send_mail(
+            subject='Recuperación de contraseña — RefriMaster',
+            message=(
+                f'Hola {nombre}:\n\n'
+                'Recibimos una solicitud para restablecer la contraseña de tu cuenta '
+                'en RefriMaster.\n\n'
+                'Para continuar, abre el siguiente enlace (válido por '
+                f'{settings.PASSWORD_RESET_TIMEOUT_MINUTES} minutos):\n\n'
+                f'{enlace}\n\n'
+                'Si no solicitaste este cambio, ignora este correo y tu contraseña '
+                'seguirá igual.\n\n'
+                'Saludos,\nEquipo RefriMaster'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except (smtplib.SMTPException, ConnectionError, TimeoutError, OSError) as exc:
+        # Solo se registra el mensaje del error SMTP, sin credenciales ni token.
+        logger.error('No se pudo enviar el correo de recuperación: %s', exc)
+        raise CorreoNoEnviado(str(exc)) from exc
+    return True
+
+
+def enviar_correo_bienvenida(user):
+    """Envía el correo de bienvenida tras crear una cuenta correctamente.
+
+    Solo se ejecuta cuando el usuario ya fue creado de forma exitosa
+    (el registro no debe enviarse si la creación falla). Para el rol cliente,
+    confirma que su cuenta fue creada correctamente.
+    """
+    if not user or not user.email:
+        return False
+    nombre = user.get_full_name() or user.username
     send_mail(
-        subject='Recuperación de contraseña — RefriMaster',
+        subject='Bienvenido a RefriMaster',
         message=(
             f'Hola {nombre}:\n\n'
-            'Recibimos una solicitud para restablecer la contraseña de tu cuenta '
-            'en RefriMaster.\n\n'
-            'Para continuar, abre el siguiente enlace (válido por '
-            f'{settings.PASSWORD_RESET_TIMEOUT_MINUTES} minutos):\n\n'
-            f'{enlace}\n\n'
-            'Si no solicitaste este cambio, ignora este correo y tu contraseña '
-            'seguirá igual.\n\n'
+            'Tu cuenta en RefriMaster fue creada correctamente. '
+            'Ya puedes iniciar sesión con tu usuario y contraseña para '
+            'comprar en la vitrina y consultar tus pedidos.\n\n'
+            'Si tienes alguna duda, no dudes en contactarnos.\n\n'
             'Saludos,\nEquipo RefriMaster'
         ),
         from_email=settings.DEFAULT_FROM_EMAIL,
         recipient_list=[user.email],
-        fail_silently=False,
+        fail_silently=True,
     )
     return True
 

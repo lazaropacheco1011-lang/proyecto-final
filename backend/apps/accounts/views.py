@@ -14,7 +14,9 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.accounts.models import Supervisor, Tecnico
 from apps.accounts.services import (
+    CorreoNoEnviado,
     buscar_token,
+    enviar_correo_bienvenida,
     enviar_correo_recuperacion,
     revocar_sesiones,
 )
@@ -83,6 +85,8 @@ class RegisterView(viewsets.GenericViewSet, mixins.CreateModelMixin):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         register_audit(user, 'crear', user, model_name='accounts.user', object_repr=str(user))
+        if user.is_cliente:
+            enviar_correo_bienvenida(user)
         data = build_token_payload(user)
         return Response(
             {'message': 'Usuario registrado correctamente.', **data},
@@ -177,7 +181,14 @@ class PasswordView(viewsets.GenericViewSet):
         """
         serializer = PasswordRecoverySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        enviar_correo_recuperacion(serializer.validated_data['email'])
+        try:
+            enviar_correo_recuperacion(serializer.validated_data['email'])
+        except CorreoNoEnviado:
+            return Response(
+                {'message': 'No se pudo enviar el correo en este momento. '
+                            'Inténtalo de nuevo más tarde.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return Response({
             'message': 'Si el correo está registrado, recibirás un enlace '
                        'para restablecer tu contraseña.',

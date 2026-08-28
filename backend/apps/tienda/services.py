@@ -131,6 +131,53 @@ def registrar_pago(orden, metodo, estado, monto=None, **extra):
     )
 
 
+def enviar_correo_confirmacion_orden(orden):
+    """Envía la confirmación de la compra al correo del cliente.
+
+    Solo debe invocarse cuando la orden ya fue creada correctamente.
+    Incluye número y fecha de la orden, productos con cantidades,
+    el total y el estado de la orden.
+    """
+    if not orden or not orden.email:
+        return False
+    from django.conf import settings
+    from django.core.mail import send_mail
+
+    lineas = []
+    for item in orden.items.all():
+        lineas.append(
+            f'- {item.cantidad} x {item.nombre} '
+            f'(${Decimal(item.precio_unitario):,.2f}) '
+            f'= ${Decimal(item.subtotal):,.2f}'
+        )
+    detalle = '\n'.join(lineas) if lineas else '(Sin productos detallados)'
+    nombre = orden.nombre_cliente or 'Cliente'
+
+    send_mail(
+        subject=f'Confirmación de tu compra — Orden {orden.numero}',
+        message=(
+            f'Hola {nombre}:\n\n'
+            f'Gracias por tu compra. Tu orden fue creada correctamente.\n\n'
+            f'---\n'
+            f'Número de orden: {orden.numero}\n'
+            f'Fecha de la compra: {orden.created_at:%d/%m/%Y %H:%M}\n'
+            f'Estado de la orden: {orden.get_estado_display()}\n'
+            f'---\n\n'
+            f'Productos: \n{detalle}\n\n'
+            f'Subtotal: ${Decimal(orden.subtotal):,.2f}\n'
+            f'Envío: ${Decimal(orden.envio):,.2f}\n'
+            f'Total de la compra: ${Decimal(orden.total):,.2f} ({orden.moneda})\n\n'
+            'Puedes consultar el detalle completo de tus pedidos desde tu '
+            'perfil en RefriMaster. Si tienes dudas, contáctanos.\n\n'
+            'Saludos,\nEquipo RefriMaster'
+        ),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[orden.email],
+        fail_silently=True,
+    )
+    return True
+
+
 def cambiar_estado_orden(orden, nuevo_estado, user=None, comentario=''):
     """Cambia el estado de una orden validando transiciones y audita el cambio."""
     if nuevo_estado == orden.estado:

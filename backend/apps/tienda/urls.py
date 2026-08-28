@@ -6,6 +6,7 @@ from apps.tienda.views import (
     CrearOrdenBilleteraView,
     CrearOrdenPayPalView,
     CrearOrdenTarjetaView,
+    MisComprasViewSet,
     OrdenPublicaDetailView,
     OrdenViewSet,
     TiendaConfigView,
@@ -13,6 +14,7 @@ from apps.tienda.views import (
 
 router = DefaultRouter()
 router.register('ordenes', OrdenViewSet, basename='tienda-ordenes')
+router.register('mis-compras', MisComprasViewSet, basename='mis-compras')
 
 urlpatterns = [
     path('config/', TiendaConfigView.as_view(), name='tienda-config'),

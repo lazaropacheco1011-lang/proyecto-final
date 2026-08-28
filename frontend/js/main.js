@@ -179,17 +179,35 @@
     var panelBtn = (user && STAFF_ROLES.indexOf(user.role) >= 0)
       ? '<a href="/admin-dashboard/" class="rounded-lg bg-primary px-4 py-2 font-label-md text-white transition-colors hover:bg-primary-hover">Panel</a>'
       : '';
-    var avatar = (user && user.photo)
-      ? '<a href="/admin-dashboard/" title="Ir a mi perfil" class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container font-bold text-primary ring-2 ring-primary/30">' +
-        '<img src="' + esc(user.photo) + '" alt="" class="h-full w-full object-cover"></a>'
-      : '';
-    area.innerHTML = panelBtn + avatar +
-      '<span class="hidden font-body-md font-medium text-on-surface-variant md:inline">Hola, ' + esc(name) + '</span>' +
+    // El perfil del cliente (nombre/avatar clicables + "Mis compras") solo se
+    // habilita en la página principal, donde existe el modal de perfil.
+    // En las páginas de servicio se conserva la navegación original.
+    var hasProfile = !!$('#modal-profile');
+    var avatar, nombre;
+    if (hasProfile) {
+      avatar = (user && user.photo)
+        ? '<button type="button" data-open="profile" class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container font-bold text-primary ring-2 ring-primary/30">' +
+          '<img src="' + esc(user.photo) + '" alt="" class="h-full w-full object-cover"></button>'
+        : '';
+      nombre = '<button type="button" data-open="profile" class="hidden font-body-md font-medium text-on-surface-variant md:inline hover:text-primary" title="Abrir mi perfil">Hola, ' + esc(name) + '</button>';
+    } else {
+      avatar = (user && user.photo)
+        ? '<a href="/admin-dashboard/" title="Ir a mi perfil" class="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container font-bold text-primary ring-2 ring-primary/30">' +
+          '<img src="' + esc(user.photo) + '" alt="" class="h-full w-full object-cover"></a>'
+        : '';
+      nombre = '<span class="hidden font-body-md font-medium text-on-surface-variant md:inline">Hola, ' + esc(name) + '</span>';
+    }
+    area.innerHTML = panelBtn + avatar + nombre +
       '<button id="logoutBtn" class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-on-surface transition-colors hover:bg-surface-dim">Cerrar sesión</button>';
     area.classList.remove('hidden');
     area.classList.add('flex');
     if (loginBtns) loginBtns.classList.add('hidden');
     loginTriggers.forEach(function (btn) { btn.classList.add('hidden'); });
+    if (hasProfile) {
+      $$('#sessionArea [data-open="profile"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openProfileModal(user); });
+      });
+    }
     var logoutBtn = $('#logoutBtn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', async function () {
@@ -222,8 +240,189 @@
     } catch (e) { /* sin sesión */ }
   })();
 
+  /* ---------- Perfil del cliente ---------- */
+  function apiAuth(path, options) {
+    options = options || {};
+    var token = localStorage.getItem('refri_access');
+    return fetch(API_BASE + path, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
+      },
+    });
+  }
+
+  function setProfMsg(text, type) {
+    var el = $('#profMsg');
+    if (!el) return;
+    if (!text) {
+      el.classList.add('hidden');
+      el.textContent = '';
+      return;
+    }
+    el.textContent = text;
+    el.classList.remove('hidden', 'text-red-700', 'bg-red-50', 'border', 'border-red-200',
+      'text-emerald-700', 'bg-emerald-50', 'border-emerald-200');
+    if (type === 'success') {
+      el.classList.add('text-emerald-700', 'bg-emerald-50', 'border', 'border-emerald-200');
+    } else {
+      el.classList.add('text-red-700', 'bg-red-50', 'border', 'border-red-200');
+    }
+  }
+
+  function profileAvatar(photo) {
+    var img = $('#profAvatar');
+    var letter = $('#profAvatarLetter');
+    if (!img || !letter) return;
+    if (photo) {
+      img.src = photo;
+      img.classList.remove('hidden');
+      letter.classList.add('hidden');
+    } else {
+      img.classList.add('hidden');
+      letter.classList.remove('hidden');
+    }
+  }
+
+  async function openProfileModal(user) {
+    var token = localStorage.getItem('refri_access');
+    if (!token) return;
+    try {
+      var res = await apiAuth('/api/auth/me/perfil/');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      var data = await res.json();
+      var p = (data && data.perfil) || {};
+      if ($('#profFirst')) $('#profFirst').value = p.nombre || p.first_name || '';
+      if ($('#profLast')) $('#profLast').value = p.apellidos || p.last_name || '';
+      profileAvatar(p.photo || null);
+      if ($('#profUserInfo')) {
+        $('#profUserInfo').textContent = (p.username || '') + (p.role ? ' · ' + (p.role_display || p.role) : '');
+      }
+      setProfMsg('', '');
+      openModal('profile');
+    } catch (e) {
+      toast('No se pudo cargar tu perfil.', 'error');
+    }
+  }
+
+  var profNameForm = $('#profNameForm');
+  if (profNameForm) {
+    profNameForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var first = $('#profFirst').value.trim();
+      var last = $('#profLast').value.trim();
+      if (!first) { setProfMsg('El nombre no puede estar vacío.', 'error'); return; }
+      setBusy('#profNameBtn', true);
+      try {
+        var res = await apiAuth('/api/auth/me/perfil/', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ first_name: first, last_name: last }),
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var u = (data && data.perfil) || {};
+        var nuevoUser = Object.assign({}, JSON.parse(localStorage.getItem('refri_user') || '{}'),
+          { first_name: first, last_name: last, full_name: ((u.nombre || first) + ' ' + (u.apellidos || last)).trim() || (u.username || '') });
+        localStorage.setItem('refri_user', JSON.stringify(nuevoUser));
+        setProfMsg('Nombre actualizado correctamente.', 'success');
+        applySession(nuevoUser);
+      } catch (err) {
+        setProfMsg('No se pudo actualizar el nombre. Verifica los datos.', 'error');
+      } finally {
+        setBusy('#profNameBtn', false);
+      }
+    });
+  }
+
+  var profPhotoForm = $('#profPhotoForm');
+  if (profPhotoForm) {
+    profPhotoForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var input = $('#profPhotoInput');
+      if (!input || !input.files || !input.files.length) {
+        setProfMsg('Selecciona una imagen para subir.', 'error');
+        return;
+      }
+      var archivo = input.files[0];
+      if (archivo.size > 5 * 1024 * 1024) {
+        setProfMsg('La imagen supera el tamaño máximo de 5 MB.', 'error');
+        return;
+      }
+      setBusy('#profPhotoBtn', true);
+      try {
+        var fd = new FormData();
+        fd.append('foto', archivo);
+        var res = await apiAuth('/api/auth/me/foto/', { method: 'POST', body: fd });
+        var data = await res.json();
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        if (data && data.user && data.user.photo) {
+          var nuevoUser = Object.assign({}, JSON.parse(localStorage.getItem('refri_user') || '{}'),
+            { photo: data.user.photo });
+          localStorage.setItem('refri_user', JSON.stringify(nuevoUser));
+          profileAvatar(data.user.photo);
+          applySession(nuevoUser);
+        }
+        setProfMsg('Foto de perfil actualizada.', 'success');
+      } catch (err) {
+        setProfMsg('No se pudo subir la foto. Verifica que sea una imagen válida.', 'error');
+      } finally {
+        setBusy('#profPhotoBtn', false);
+      }
+    });
+  }
+
+  var profPassForm = $('#profPassForm');
+  if (profPassForm) {
+    profPassForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      var actual = $('#profPassActual').value;
+      var nueva = $('#profPassNueva').value;
+      var conf = $('#profPassConf').value;
+      if (!actual || !nueva || !conf) {
+        setProfMsg('Completa todos los campos de contraseña.', 'error');
+        return;
+      }
+      if (nueva.length < 8) {
+        setProfMsg('La nueva contraseña debe tener al menos 8 caracteres.', 'error');
+        return;
+      }
+      if (/^\d+$/.test(nueva)) {
+        setProfMsg('La nueva contraseña no puede ser solo números.', 'error');
+        return;
+      }
+      if (nueva !== conf) {
+        setProfMsg('Las contraseñas nuevas no coinciden.', 'error');
+        return;
+      }
+      setBusy('#profPassBtn', true);
+      try {
+        var res = await apiAuth('/api/auth/password/cambiar/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            password_actual: actual,
+            nueva_password: nueva,
+            confirmar_nueva_password: conf,
+          }),
+        });
+        var data = await res.json();
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        $('#profPassForm').reset();
+        setProfMsg(data.message || 'Contraseña cambiada correctamente.', 'success');
+      } catch (err) {
+        var msg = 'No se pudo cambiar la contraseña. La contraseña actual debe ser correcta.';
+        setProfMsg(msg, 'error');
+      } finally {
+        setBusy('#profPassBtn', false);
+      }
+    });
+  }
+
   /* ---------- Login ---------- */
-  $('#loginForm').addEventListener('submit', async function (e) {
+  var loginForm = $('#loginForm');
+  if (loginForm) loginForm.addEventListener('submit', async function (e) {
     e.preventDefault();
     var username = $('#loginUser').value.trim();
     var password = $('#loginPass').value;
@@ -260,7 +459,8 @@
   });
 
   /* ---------- Registro ---------- */
-  $('#registerForm').addEventListener('submit', async function (e) {
+  var registerForm = $('#registerForm');
+  if (registerForm) registerForm.addEventListener('submit', async function (e) {
     e.preventDefault();
     var payload = {
       username: $('#regUser').value.trim(),
@@ -314,7 +514,8 @@
   });
 
   /* ---------- Recuperar contraseña ---------- */
-  $('#recoverForm').addEventListener('submit', async function (e) {
+  var recoverForm = $('#recoverForm');
+  if (recoverForm) recoverForm.addEventListener('submit', async function (e) {
     e.preventDefault();
     var email = $('#recoverEmail').value.trim();
     if (!email) {
@@ -353,7 +554,8 @@
     closeModal('recover');
   }
 
-  $('#resetForm').addEventListener('submit', async function (e) {
+  var resetForm = $('#resetForm');
+  if (resetForm) resetForm.addEventListener('submit', async function (e) {
     e.preventDefault();
     var token = $('#resetToken').value;
     var p1 = $('#resetPass').value;

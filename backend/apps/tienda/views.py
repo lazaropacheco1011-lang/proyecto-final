@@ -17,6 +17,7 @@ from apps.tienda.serializers import OrdenPublicaSerializer, OrdenSerializer
 from apps.tienda.services import (
     cambiar_estado_orden,
     crear_orden_desde_carrito,
+    enviar_correo_confirmacion_orden,
     registrar_pago,
 )
 
@@ -161,6 +162,7 @@ class CrearOrdenTarjetaView(APIView):
             'total': str(orden.total),
         }
         if resultado['aprobado']:
+            enviar_correo_confirmacion_orden(orden)
             return Response(payload_resp, status=status.HTTP_201_CREATED)
         return Response(payload_resp, status=status.HTTP_402_PAYMENT_REQUIRED)
 
@@ -235,6 +237,7 @@ class AprobarPayPalView(APIView):
             if orden.estado == Orden.Estado.PENDIENTE:
                 orden.estado = Orden.Estado.CONFIRMADO
                 orden.save(update_fields=['estado', 'updated_at'])
+            enviar_correo_confirmacion_orden(orden)
             return Response({'orden': numero, 'estado_pago': pago.estado})
         return Response(
             {'detail': 'No se pudo capturar el pago en PayPal.'},
@@ -267,6 +270,7 @@ class CrearOrdenBilleteraView(APIView):
         except ValueError as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        enviar_correo_confirmacion_orden(orden)
         return Response({
             'orden': orden.numero,
             'estado_pago': PagoTienda.Estado.PENDIENTE,
@@ -327,3 +331,24 @@ class OrdenViewSet(viewsets.ReadOnlyModelViewSet):
         pago.estado = PagoTienda.Estado.REEMBOLSADO
         pago.save(update_fields=['estado', 'updated_at'])
         return Response({'orden': orden.numero, 'estado_pago': pago.estado})
+
+
+class MisComprasViewSet(viewsets.ReadOnlyModelViewSet):
+    """Historial de compras del cliente autenticado (solo sus propias órdenes).
+
+    La autorización se aplica sobre el queryset filtrando por el usuario
+    autenticado, por lo que un cliente nunca puede ver ni consultar las
+    órdenes de otro cliente aunque modifique un ID en la URL o la petición.
+    """
+    serializer_class = OrdenPublicaSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        return [perm() for perm in (IsAuthenticated, IsCliente)]
+
+    def get_queryset(self):
+        return (
+            Orden.objects
+            .filter(usuario=self.request.user)
+            .prefetch_related('items', 'pagos')
+        )
