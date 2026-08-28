@@ -198,7 +198,7 @@
       nombre = '<span class="hidden font-body-md font-medium text-on-surface-variant md:inline">Hola, ' + esc(name) + '</span>';
     }
     area.innerHTML = panelBtn + avatar + nombre +
-      '<button id="logoutBtn" class="rounded-lg border border-outline-variant px-4 py-2 font-label-md text-on-surface transition-colors hover:bg-surface-dim">Cerrar sesión</button>';
+      '<button id="logoutBtn" class="rounded-lg border border-outline-variant px-2.5 py-1.5 font-label-md text-on-surface transition-colors hover:bg-surface-dim md:px-4 md:py-2">Cerrar sesión</button>';
     area.classList.remove('hidden');
     area.classList.add('flex');
     if (loginBtns) loginBtns.classList.add('hidden');
@@ -615,6 +615,19 @@
         mobileMenu.classList.add('hidden');
       });
     });
+
+    /* En móvil, cerrar el menú automáticamente al desplazarse hacia abajo.
+       Solo actúa en pantallas móviles (ventana < 768px, el breakpoint md de
+       Tailwind) y cuando el usuario baja. passive evita bloquear el scroll. */
+    var lastScrollY = window.pageYOffset || document.documentElement.scrollTop;
+    window.addEventListener('scroll', function () {
+      var nowY = window.pageYOffset || document.documentElement.scrollTop;
+      var isMobile = window.innerWidth < 768;
+      if (isMobile && nowY > lastScrollY && !mobileMenu.classList.contains('hidden')) {
+        mobileMenu.classList.add('hidden');
+      }
+      lastScrollY = nowY;
+    }, { passive: true });
   }
 
   /* ---------- Año del footer ---------- */
