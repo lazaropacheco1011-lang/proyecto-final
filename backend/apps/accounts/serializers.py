@@ -100,6 +100,13 @@ class UserUpdateSerializer(UserCreateSerializer):
             'last_name', 'role', 'phone', 'is_active',
         ]
 
+    def validate_email(self, value):
+        # Al editar (self.instance presente) se excluye el propio registro para
+        # permitir mantener el mismo correo; solo se rechaza si lo tiene otro usuario.
+        if User.objects.filter(email__iexact=value).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise serializers.ValidationError('El correo electrónico ya está registrado.')
+        return value
+
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
         for attr, value in validated_data.items():
@@ -487,3 +494,14 @@ class SupervisorSerializer(serializers.ModelSerializer):
 
     def get_tecnicos_count(self, obj):
         return obj.tecnicos.count()
+
+    def validate_telefono(self, value):
+        value = (value or '').strip()
+        if not value:
+            return value
+        qs = Supervisor.objects.filter(telefono__iexact=value)
+        if self.instance is not None:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('El número de teléfono ya está registrado.')
+        return value

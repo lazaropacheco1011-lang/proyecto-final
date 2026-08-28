@@ -15,7 +15,7 @@
    * ------------------------------------------------------------------ */
   var API_BASE = new URLSearchParams(location.search).get('api') ||
                  window.REFRI_API ||
-                 'http://127.0.0.1:8000';
+                 window.location.origin;
   var PAGE_SIZE = 20;
   var STAFF_ROLES = ['administrador', 'supervisor', 'tecnico', 'almacen'];
   var STOCK_MINIMO = 5;
@@ -341,23 +341,25 @@
   /* ------------------------------------------------------------------
    * Construcción de UI reutilizable
    * ------------------------------------------------------------------ */
+  function tableRows(columns, items) {
+    if (!items || !items.length) {
+      return '<tr><td colspan="' + columns.length + '">' +
+              '<div class="empty-state"><span class="material-symbols-outlined">inbox</span>' +
+              '<p>Sin registros para mostrar.</p></div></td></tr>';
+    }
+    return items.map(function (item) {
+      var rowId = item && item.id != null ? ' data-id="' + esc(item.id) + '"' : '';
+      return '<tr' + rowId + '>' + columns.map(function (c) {
+        var v = c.render ? c.render(item) : item[c.key];
+        return '<td>' + (v == null ? '—' : v) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+  }
+
   function buildTable(columns, items) {
     var html = '<div class="overflow-x-auto"><table class="adm-table"><thead><tr>';
     html += columns.map(function (c) { return '<th>' + esc(c.label) + '</th>'; }).join('');
-    html += '</tr></thead><tbody>';
-    if (!items || !items.length) {
-      html += '<tr><td colspan="' + columns.length + '">' +
-              '<div class="empty-state"><span class="material-symbols-outlined">inbox</span>' +
-              '<p>Sin registros para mostrar.</p></div></td></tr>';
-    } else {
-      html += items.map(function (item) {
-        return '<tr>' + columns.map(function (c) {
-          var v = c.render ? c.render(item) : item[c.key];
-          return '<td>' + (v == null ? '—' : v) + '</td>';
-        }).join('') + '</tr>';
-      }).join('');
-    }
-    html += '</tbody></table></div>';
+    html += '</tr></thead><tbody data-list-body>' + tableRows(columns, items) + '</tbody></table></div>';
     return html;
   }
 
@@ -930,6 +932,7 @@
    * ------------------------------------------------------------------ */
   async function renderClientes() {
     sdCache = {};
+    cssClear('clientes');   // lista completa fresca
     setViewLoading();
     var state = st('clientes', { tipo: '', tipo_documento: '' });
     var qs = ['page=' + (state.page || 1)];
@@ -990,6 +993,20 @@
       columns: columns,
       items: data.results || [],
     });
+
+    clientSideSearch({
+      key: 'clientes',
+      url: '/api/clientes/',
+      columns: columns,
+      filter: function (c, q) {
+        q = q.toLowerCase();
+        return (c.nombre_completo || '').toLowerCase().indexOf(q) >= 0 ||
+               (c.documento_numero || '').toLowerCase().indexOf(q) >= 0 ||
+               (c.email || '').toLowerCase().indexOf(q) >= 0 ||
+               (c.telefono || '').toLowerCase().indexOf(q) >= 0 ||
+               (c.ciudad || '').toLowerCase().indexOf(q) >= 0;
+      },
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -997,6 +1014,7 @@
    * ------------------------------------------------------------------ */
   async function renderTecnicos() {
     sdCache = {};
+    cssClear('tecnicos');
     setViewLoading();
     var state = st('tecnicos', { disponible: '' });
     var data;
@@ -1024,9 +1042,11 @@
       { label: 'Acciones', render: function (t) {
           var btns = [
             { kind: 'icon', action: 'editar', icon: 'edit', title: 'Editar perfil', color: 'primary' },
-            { kind: 'icon', action: 'editar_usuario', icon: 'manage_accounts', title: 'Editar usuario' },
           ];
-          if (canDelete() || S.user.role === 'supervisor') {
+          if (isAdmin()) {
+            btns.push({ kind: 'icon', action: 'editar_usuario', icon: 'manage_accounts', title: 'Editar usuario' });
+          }
+          if (canDelete() || isSupervisor()) {
             btns.push({ kind: 'icon', action: 'eliminar', icon: 'delete', title: 'Eliminar técnico', danger: true });
           }
           return actionBtns(t, btns);
@@ -1043,13 +1063,19 @@
               { value: 'true', label: 'Disponibles' }, { value: 'false', label: 'Ocupados' } ] },
         ],
         buttons: (function () {
-          var btns = [{ action: 'crear', icon: 'person_add', label: 'Agregar técnico' }];
-          if (S.user.role === 'supervisor') btns.push({ action: 'crear_trabajo', icon: 'add', label: 'Agregar trabajo' });
-          return btns;
+          if (isSupervisor()) return [{ action: 'crear_trabajo', icon: 'add', label: 'Agregar trabajo' }];
+          return [{ action: 'crear', icon: 'person_add', label: 'Agregar técnico' }];
         })(),
       },
       columns: columns,
       items: data.results || [],
+    });
+    cssRegister({
+      key: 'tecnicos',
+      url: '/api/tecnicos/',
+      columns: columns,
+      fields: ['nombre', 'username', 'especialidad', 'telefono', 'email', 'supervisor_nombre'],
+      active: ['disponible'],
     });
   }
 
@@ -1058,6 +1084,7 @@
    * ------------------------------------------------------------------ */
   async function renderSupervisores() {
     sdCache = {};
+    cssClear('supervisores');
     setViewLoading();
     var state = st('supervisores', {});
     var data;
@@ -1098,6 +1125,13 @@
       columns: columns,
       items: data.results || [],
     });
+    cssRegister({
+      key: 'supervisores',
+      url: '/api/supervisores/',
+      columns: columns,
+      fields: ['nombre', 'username', 'email', 'telefono'],
+      active: [],
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -1105,6 +1139,7 @@
    * ------------------------------------------------------------------ */
   async function renderEquipos() {
     sdCache = {};
+    cssClear('equipos');
     setViewLoading();
     var state = st('equipos', { estado: '' });
     var data;
@@ -1158,6 +1193,13 @@
       columns: columns,
       items: data.results || [],
     });
+    cssRegister({
+      key: 'equipos',
+      url: '/api/equipos/',
+      columns: columns,
+      fields: ['marca', 'modelo', 'numero_serie', 'tipo_nombre', 'cliente_nombre', 'capacidad', 'refrigerante'],
+      active: ['estado'],
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -1165,6 +1207,7 @@
    * ------------------------------------------------------------------ */
   async function renderMisEquipos() {
     sdCache = {};
+    cssClear('mis_equipos');
     setViewLoading();
     var state = st('mis_equipos', {});
     var data;
@@ -1198,6 +1241,13 @@
       },
       columns: columns,
       items: data.results || [],
+    });
+    cssRegister({
+      key: 'mis_equipos',
+      url: '/api/equipos/',
+      columns: columns,
+      fields: ['marca', 'modelo', 'numero_serie', 'tipo_nombre', 'capacidad', 'refrigerante'],
+      active: [],
     });
   }
 
@@ -1246,6 +1296,7 @@
    * ------------------------------------------------------------------ */
   async function renderSolicitudes() {
     sdCache = {};
+    cssClear('solicitudes');
     setViewLoading();
     var state = st('solicitudes', { estado: '', prioridad: '' });
     var data;
@@ -1292,6 +1343,13 @@
       columns: columns,
       items: data.results || [],
     });
+    cssRegister({
+      key: 'solicitudes',
+      url: '/api/solicitudes/',
+      columns: columns,
+      fields: ['id', 'cliente_nombre', 'tipo_equipo_solicitado', 'prioridad_display', 'estado_display'],
+      active: ['estado', 'prioridad'],
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -1299,6 +1357,7 @@
    * ------------------------------------------------------------------ */
   async function renderInstalaciones() {
     sdCache = {};
+    cssClear('instalaciones');
     setViewLoading();
     var state = st('instalaciones', { estado: '' });
     var data;
@@ -1350,10 +1409,17 @@
       columns: columns,
       items: data.results || [],
     });
+    cssRegister({
+      key: 'instalaciones',
+      url: '/api/instalaciones/',
+      columns: columns,
+      fields: ['cliente_nombre', 'equipo_nombre', 'tecnico_nombre', 'direccion', 'prioridad_display', 'estado_display'],
+      active: ['estado'],
+    });
   }
 
   /* ------------------------------------------------------------------
-   * AGENDA INTELIGENTE (RF-10): calendario + mapa
+   * AGENDA
    * ------------------------------------------------------------------ */
   var ESTADOS_INSTALACION = [
     { value: 'pendiente', label: 'Pendiente' }, { value: 'asignada', label: 'Asignada' },
@@ -1889,6 +1955,7 @@
 
   async function renderPagos() {
     sdCache = {};
+    cssClear('pagos');
     setViewLoading();
     var state = st('pagos', { tab: 'pagos', estado: '', metodo: '' });
     var html = tabsHTML(state, [
@@ -1898,6 +1965,7 @@
 
     if (state.tab === 'facturas') {
       var facturas;
+      var colsFacturas;
       try {
         facturas = await loadList('/api/facturas/', state);
       } catch (err) {
@@ -1912,7 +1980,7 @@
           placeholder: 'Buscar por número o cliente…',
           buttons: [{ action: 'nueva_factura', icon: 'add', label: 'Nueva factura' }],
         },
-        columns: [
+        columns: (colsFacturas = [
           { label: 'Número', render: function (f) { return '<span class="font-semibold">' + esc(f.numero) + '</span>'; } },
           { label: 'Cliente', key: 'cliente_nombre' },
           { label: 'Orden', key: 'orden_numero' },
@@ -1925,16 +1993,43 @@
               if (canDelete()) btns.push({ kind: 'icon', action: 'eliminar_factura', icon: 'delete', title: 'Eliminar', danger: true });
               return actionBtns(f, btns);
             } },
-        ],
+        ]),
         items: facturas.results || [],
       });
       $('#view').innerHTML = html;
+      cssRegister({
+        key: 'pagos:facturas',
+        url: '/api/facturas/',
+        columns: colsFacturas,
+        fields: ['numero', 'cliente_nombre', 'orden_numero'],
+        active: [],
+      });
       return;
     }
 
     var pagos;
+    var colsPagos;
+    var specPagos = cssSpec();
+    var useCssPagos = specPagos && (!specPagos.active || specPagos.active());
     try {
-      pagos = await loadList('/api/pagos/', state, ['estado', 'metodo']);
+      if (useCssPagos && state.search) {
+        // Búsqueda client-side: el servidor /api/pagos/ no filtra por cliente,
+        // así que al seleccionar una sugerencia se cargan todos y se filtran en memoria.
+        // Se pagina en memoria con la misma estructura existente (state.page / paginationHTML).
+        var fullPagos = await cssFullList(specPagos);
+        var filtrados = fullPagos.filter(function (p) { return specPagos.filter(p, state.search); });
+        var totalPaginas = Math.max(1, Math.ceil(filtrados.length / PAGE_SIZE));
+        var pagina = Math.min(Math.max(1, state.page || 1), totalPaginas);
+        if (pagina !== (state.page || 1)) state.page = pagina;
+        pagos = {
+          results: filtrados.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE),
+          count: filtrados.length,
+          previous: pagina > 1 ? pagina - 1 : null,
+          next: pagina < totalPaginas ? pagina + 1 : null,
+        };
+      } else {
+        pagos = await loadList('/api/pagos/', state, ['estado', 'metodo']);
+      }
     } catch (err) {
       setViewError(apiErrorMessage(err));
       return;
@@ -1955,7 +2050,7 @@
         ],
         buttons: [{ action: 'crear', icon: 'add', label: 'Nuevo pago' }],
       },
-      columns: [
+      columns: (colsPagos = [
         { label: 'Cliente', key: 'cliente_nombre' },
         { label: 'Concepto', render: function (p) {
             if (p.orden_numero) return 'Orden ' + esc(p.orden_numero);
@@ -1972,10 +2067,17 @@
             if (canDelete()) btns.push({ kind: 'icon', action: 'eliminar', icon: 'delete', title: 'Eliminar', danger: true });
             return actionBtns(p, btns);
           } },
-      ],
+      ]),
       items: pagos.results || [],
     });
     $('#view').innerHTML = html;
+    cssRegister({
+      key: 'pagos:pagos',
+      url: '/api/pagos/',
+      columns: colsPagos,
+      fields: ['cliente_nombre', 'orden_numero', 'instalacion_id', 'metodo_display', 'referencia', 'estado_display'],
+      active: ['estado', 'metodo'],
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -1983,6 +2085,7 @@
    * ------------------------------------------------------------------ */
   async function renderInventario() {
     sdCache = {};
+    cssClear('inventario');
     setViewLoading();
     var state = st('inventario', { tab: 'materiales', categoria: '', unidad_medida: '' });
     var html = tabsHTML(state, [
@@ -1997,6 +2100,7 @@
 
     if (state.tab === 'movimientos') {
       var movs;
+      var colsMovs;
       try {
         movs = await loadList('/api/movimientos/', state);
       } catch (err) {
@@ -2007,7 +2111,7 @@
         state: state,
         data: movs,
         toolbar: { search: state.search, placeholder: 'Buscar por material o motivo…' },
-        columns: [
+        columns: (colsMovs = [
           { label: 'Fecha', render: function (m) { return fmtDT(m.fecha); } },
           { label: 'Material', render: function (m) {
               return '<div class="font-medium text-on-surface">' + esc(m.material_nombre) + '</div>' +
@@ -2017,14 +2121,22 @@
           { label: 'Cantidad', render: function (m) { return m.cantidad; } },
           { label: 'Motivo', key: 'motivo' },
           { label: 'Usuario', key: 'usuario_nombre' },
-        ],
+        ]),
         items: movs.results || [],
       });
       $('#view').innerHTML = html;
+      cssRegister({
+        key: 'inventario:movimientos',
+        url: '/api/movimientos/',
+        columns: colsMovs,
+        fields: ['material_nombre', 'material_codigo', 'motivo', 'usuario_nombre', 'tipo_display'],
+        active: [],
+      });
       return;
     }
 
     var mats;
+    var colsMats;
     var matsUrl = state.stock_bajo ? '/api/materiales/stock_bajo/' : '/api/materiales/';
     try {
       mats = await loadList(matsUrl, state, ['categoria', 'unidad_medida']);
@@ -2051,7 +2163,7 @@
         ],
         buttons: [{ action: 'crear', icon: 'add', label: 'Nuevo material' }],
       },
-      columns: [
+      columns: (colsMats = [
         { label: 'Material', render: function (m) {
             return '<div class="font-semibold text-on-surface">' + esc(m.nombre) + '</div>' +
                    '<div class="text-xs text-on-surface-variant">' + esc(m.codigo) + '</div>';
@@ -2077,10 +2189,17 @@
             }
             return actionBtns(m, btns);
           } },
-      ]),
+      ])),
       items: mats.results || [],
     });
     $('#view').innerHTML = html;
+    cssRegister({
+      key: 'inventario:materiales',
+      url: '/api/materiales/',
+      columns: colsMats,
+      fields: ['nombre', 'codigo', 'categoria', 'unidad_display'],
+      active: ['categoria', 'unidad_medida', 'stock_bajo'],
+    });
   }
 
   /* ------------------------------------------------------------------
@@ -2088,6 +2207,7 @@
    * ------------------------------------------------------------------ */
   async function renderAlmacen() {
     sdCache = {};
+    cssClear('almacen');
     setViewLoading();
     var state = st('almacen', { tab: 'productos', categoria: '', disponible: '' });
     var tabs = [
@@ -2099,6 +2219,7 @@
 
     if (state.tab === 'historial') {
       var logs;
+      var colsLogs;
       try {
         logs = await loadList('/api/auditoria/', state, ['model_name']);
       } catch (err) {
@@ -2128,7 +2249,7 @@
               ] },
           ],
         },
-        columns: [
+        columns: (colsLogs = [
           { label: 'Fecha', render: function (l) { return fmtDT(l.created_at); } },
           { label: 'Usuario', key: 'usuario' },
           { label: 'Acción', render: function (l) {
@@ -2150,10 +2271,17 @@
                 return '<span class="badge badge-neutral">' + esc(k) + '</span> ' + esc(v);
               }).join(' ');
             } },
-        ],
+        ]),
         items: logs.results || [],
       });
       $('#view').innerHTML = html;
+      cssRegister({
+        key: 'almacen:historial',
+        url: '/api/auditoria/',
+        columns: colsLogs,
+        fields: ['usuario', 'object_repr', 'model_name', 'action'],
+        active: ['model_name'],
+      });
       return;
     }
 
@@ -2190,6 +2318,7 @@
     }
 
     var data;
+    var colsProd;
     try {
       data = await loadList('/api/productos/', state, ['categoria', 'disponible']);
     } catch (err) {
@@ -2224,7 +2353,7 @@
           { action: 'crear', icon: 'add', label: 'Agregar producto' },
         ],
       },
-      columns: [
+      columns: (colsProd = [
         { label: 'Producto', render: function (p) {
             return '<div class="flex items-center gap-3">' +
                    (p.imagen ? '<img src="' + esc(p.imagen) + '" alt="" class="h-10 w-10 rounded-lg object-cover" loading="lazy">' : '') +
@@ -2252,10 +2381,17 @@
             if (canManageAlmacen()) btns.push({ kind: 'icon', action: 'eliminar', icon: 'delete', title: 'Eliminar producto', danger: true });
             return actionBtns(p, btns);
           } },
-      ],
+      ]),
       items: res,
     });
     $('#view').innerHTML = html;
+    cssRegister({
+      key: 'almacen:productos',
+      url: '/api/productos/',
+      columns: colsProd,
+      fields: ['nombre', 'categoria_nombre', 'descripcion'],
+      active: ['categoria', 'disponible'],
+    });
   }
 
   async function openCategoriaForm(item) {
@@ -2381,6 +2517,7 @@
 
   async function renderTienda() {
     sdCache = {};
+    cssClear('tienda');
     setViewLoading();
     var state = st('tienda', { tab: 'ordenes', estado: '', metodo: '' });
     var html = tabsHTML(state, [
@@ -2389,27 +2526,34 @@
     ]);
 
     if (state.tab === 'pagos') {
-      var filas = [];
-      try {
-        var todas = await fetchAll('/api/tienda/ordenes/');
-        todas.forEach(function (o) {
-          (o.pagos || []).forEach(function (p) {
-            filas.push({
-              orden: o.numero,
-              cliente: o.cliente_display,
-              metodo: p.metodo,
-              metodo_display: p.metodo_display,
-              estado: p.estado,
-              estado_display: p.estado_display,
-              monto: p.monto,
-              moneda: p.moneda,
-              referencia: p.referencia,
-              ultimos_digitos: p.ultimos_digitos,
-              marca_tarjeta: p.marca_tarjeta,
-              fecha: p.created_at,
+      var colsTPagos;
+      var cargarPagosTienda = function () {
+        return fetchAll('/api/tienda/ordenes/').then(function (todas) {
+          var filas = [];
+          todas.forEach(function (o) {
+            (o.pagos || []).forEach(function (p) {
+              filas.push({
+                orden: o.numero,
+                cliente: o.cliente_display,
+                metodo: p.metodo,
+                metodo_display: p.metodo_display,
+                estado: p.estado,
+                estado_display: p.estado_display,
+                monto: p.monto,
+                moneda: p.moneda,
+                referencia: p.referencia,
+                ultimos_digitos: p.ultimos_digitos,
+                marca_tarjeta: p.marca_tarjeta,
+                fecha: p.created_at,
+              });
             });
           });
+          return filas;
         });
+      };
+      var filas;
+      try {
+        filas = await cargarPagosTienda();
       } catch (err) {
         setViewError(apiErrorMessage(err));
         return;
@@ -2439,7 +2583,7 @@
                 { value: 'billetera', label: 'Billetera / app' } ] },
           ],
         },
-        columns: [
+        columns: (colsTPagos = [
           { label: 'Orden', render: function (p) { return '<span class="font-semibold">' + esc(p.orden) + '</span>'; } },
           { label: 'Cliente', key: 'cliente' },
           { label: 'Método', render: function (p) { return esc(p.metodo_display); } },
@@ -2451,14 +2595,22 @@
             } },
           { label: 'Estado', render: function (p) { return estadoBadge(p.estado, p.estado_display); } },
           { label: 'Fecha', render: function (p) { return fmtDT(p.fecha); } },
-        ],
+        ]),
         items: pagina,
       });
       $('#view').innerHTML = html;
+      cssRegister({
+        key: 'tienda:pagos',
+        columns: colsTPagos,
+        fields: ['orden', 'cliente', 'referencia', 'marca_tarjeta', 'metodo_display'],
+        active: ['metodo'],
+        source: cargarPagosTienda,
+      });
       return;
     }
 
     var data;
+    var colsTOrdenes;
     try {
       data = await loadList('/api/tienda/ordenes/', state, ['estado']);
     } catch (err) {
@@ -2478,7 +2630,7 @@
               { value: 'entregado', label: 'Entregado' }, { value: 'cancelado', label: 'Cancelado' } ] },
         ],
       },
-      columns: [
+      columns: (colsTOrdenes = [
         { label: 'Orden', render: function (o) {
             return '<div class="font-semibold text-on-surface">' + esc(o.numero) + '</div>' +
                    '<div class="text-xs text-on-surface-variant">' + fmtDT(o.created_at) + '</div>';
@@ -2509,10 +2661,17 @@
             }
             return actionBtns(o, btns);
           } },
-      ],
+      ]),
       items: data.results || [],
     });
     $('#view').innerHTML = html;
+    cssRegister({
+      key: 'tienda:ordenes',
+      url: '/api/tienda/ordenes/',
+      columns: colsTOrdenes,
+      fields: ['numero', 'cliente_display', 'email', 'metodo_pago', 'estado_display'],
+      active: ['estado'],
+    });
   }
 
   function estadoFormHTML(orden) {
@@ -2659,6 +2818,7 @@
 
   async function renderServicios() {
     sdCache = {};
+    cssClear('servicios');   // lista completa fresca
     setViewLoading();
     var state = st('servicios', { estado: '', tipo_servicio: '' });
     var data;
@@ -2716,6 +2876,26 @@
       items: data.results || [],
     });
     $('#view').innerHTML = html;
+    clientSideSearch({
+      key: 'servicios',
+      url: '/api/servicios/',
+      columns: columns,
+      // Solo búsqueda client-side cuando no hay filtros de estado/tipo activos;
+      // si hay un filtro, se mantiene el comportamiento de servidor existente.
+      active: function () {
+        var s = currentListState();
+        return !s || (!s.estado && !s.tipo_servicio);
+      },
+      filter: function (o, q) {
+        q = q.toLowerCase();
+        return (o.numero || '').toLowerCase().indexOf(q) >= 0 ||
+               (o.cliente_nombre || '').toLowerCase().indexOf(q) >= 0 ||
+               (o.equipo_nombre || '').toLowerCase().indexOf(q) >= 0 ||
+               (o.tecnico_nombre || '').toLowerCase().indexOf(q) >= 0 ||
+               (o.problema_reportado || '').toLowerCase().indexOf(q) >= 0 ||
+               (o.diagnostico || '').toLowerCase().indexOf(q) >= 0;
+      },
+    });
   }
 
   function serviciosAction(action, id) {
@@ -2930,6 +3110,7 @@
 
   async function renderMantenimientos() {
     sdCache = {};
+    cssClear('mantenimientos');
     setViewLoading();
     var state = st('mantenimientos', { estado: '', tipo: '' });
     var flag = state.proximos ? 'proximos' : (state.vencidos ? 'vencidos' : '');
@@ -2989,6 +3170,13 @@
       items: data.results || [],
     });
     $('#view').innerHTML = html;
+    cssRegister({
+      key: 'mantenimientos',
+      url: '/api/mantenimientos/',
+      columns: columns,
+      fields: ['equipo_nombre', 'cliente_nombre', 'tecnico_nombre', 'tipo_display', 'descripcion', 'estado_display'],
+      active: ['estado', 'tipo', 'proximos', 'vencidos'],
+    });
   }
 
   function mantenimientosAction(action, id) {
@@ -3084,6 +3272,7 @@
    * ------------------------------------------------------------------ */
   async function renderEvaluaciones() {
     sdCache = {};
+    cssClear('evaluaciones');
     setViewLoading();
     if (S.user.role === 'cliente') return renderMisEvaluaciones();
     var state = st('evaluaciones', { calificacion: '' });
@@ -3125,9 +3314,15 @@
       columns: columns,
       items: data.results || [],
     });
+    cssRegister({
+      key: 'evaluaciones',
+      url: '/api/evaluaciones/',
+      columns: columns,
+      fields: ['cliente_nombre', 'comentario', 'orden_numero', 'instalacion_id'],
+      active: ['calificacion'],
+    });
   }
 
-  /* Vista del cliente: servicios finalizados listos para evaluar (RF-25, RN-10). */
   async function renderMisEvaluaciones() {
     var servicios, misEvals;
     try {
@@ -3306,6 +3501,7 @@
    * ------------------------------------------------------------------ */
   async function renderUsuarios() {
     sdCache = {};
+    cssClear('usuarios');
     setViewLoading();
     var state = st('usuarios', { role: '' });
     var data;
@@ -3353,10 +3549,17 @@
       columns: columns,
       items: data.results || [],
     });
+    cssRegister({
+      key: 'usuarios',
+      url: '/api/usuarios/',
+      columns: columns,
+      fields: ['username', 'full_name', 'email', 'phone', 'role_display'],
+      active: ['role'],
+    });
   }
 
   /* ------------------------------------------------------------------
-   * MI PERFIL (foto de perfil + datos personales según rol)
+   * PERFIL
    * ------------------------------------------------------------------ */
   var pendingFoto = null;
   var TIPO_DOC_CHOICES = [
@@ -3629,6 +3832,7 @@
 
   async function renderVisitas() {
     sdCache = {};
+    cssClear('visitas');
     setViewLoading();
     var state = st('visitas', { estado: '' });
     var data;
@@ -3672,6 +3876,13 @@
       },
       columns: columns,
       items: data.results || [],
+    });
+    cssRegister({
+      key: 'visitas',
+      url: '/api/visitas/',
+      columns: columns,
+      fields: ['numero', 'motivo', 'cliente_nombre', 'orden_numero', 'tecnico_nombre', 'direccion', 'estado_display'],
+      active: ['estado'],
     });
   }
 
@@ -3744,6 +3955,7 @@
 
   async function renderCotizaciones() {
     sdCache = {};
+    cssClear('cotizaciones');
     setViewLoading();
     var state = st('cotizaciones', { estado: '' });
     var data;
@@ -3787,6 +3999,13 @@
       },
       columns: columns,
       items: data.results || [],
+    });
+    cssRegister({
+      key: 'cotizaciones',
+      url: '/api/cotizaciones/',
+      columns: columns,
+      fields: ['numero', 'cliente_nombre', 'tecnico_nombre', 'notas', 'estado_display'],
+      active: ['estado'],
     });
   }
 
@@ -4055,6 +4274,44 @@
     }
   }
 
+  // Detalle de solo lectura del cliente (se abre al hacer clic en la fila).
+  function openClienteDetail(c) {
+    var fila = function (label, valor) {
+      return '<div class="flex justify-between gap-6"><span class="text-on-surface-variant">' + esc(label) +
+             '</span><span class="font-semibold text-right">' + (valor == null || valor === '' ? '—' : valor) + '</span></div>';
+    };
+    var html = '<div class="space-y-2 text-sm">' +
+      fila('Tipo', c.tipo === 'empresa' ? 'Empresa' : 'Persona natural') +
+      (c.apellidos ? fila('Apellidos', esc(c.apellidos)) : '') +
+      fila('Documento', (c.tipo_documento_display ? esc(c.tipo_documento_display) + ': ' : '') + esc(c.documento_numero)) +
+      fila('Correo', esc(c.email_contacto || c.email)) +
+      fila('Teléfono', esc(c.telefono)) +
+      fila('Teléfono alternativo', esc(c.telefono_alternativo)) +
+      fila('Dirección', esc(c.direccion)) +
+      fila('Ciudad', esc(c.ciudad)) +
+      fila('Equipos', String(c.total_equipos != null ? c.total_equipos : 0)) +
+      fila('Fecha de registro', fmtDT(c.fecha_registro)) +
+      (c.username ? fila('Usuario de acceso', esc(c.username)) : '') +
+      '</div>';
+    if (c.notas) {
+      html += '<div class="mt-4 border-t border-outline-variant pt-3 text-sm"><span class="text-on-surface-variant">Notas</span>' +
+              '<p class="mt-1">' + esc(c.notas) + '</p></div>';
+    }
+    if (c.direcciones && c.direcciones.length) {
+      html += '<div class="mt-4"><h4 class="mb-2 text-sm font-bold text-on-surface">Direcciones de instalación</h4>' +
+              buildTable([
+                { label: 'Etiqueta', key: 'etiqueta' },
+                { label: 'Dirección', key: 'direccion' },
+                { label: 'Ciudad', key: 'ciudad' },
+                { label: 'Referencia', key: 'referencia' },
+              ], c.direcciones) + '</div>';
+    }
+    openModal('Cliente: ' + esc(c.nombre_completo), html, {
+      width: '560px',
+      footer: '<button class="btn btn-primary" data-close>Cerrar</button>',
+    });
+  }
+
   /* ---------- USUARIOS (compartido con técnicos) ---------- */
   var ROLES = [
     { value: 'administrador', label: 'Administrador' },
@@ -4172,6 +4429,48 @@
         reloadCurrent();
       } catch (err) { toast(apiErrorMessage(err), 'error'); }
       finally { setBusy(btn, false); }
+    });
+  }
+
+  function openTecnicoDetail(t) {
+    var fila = function (label, valor) {
+      return '<div class="flex justify-between gap-6"><span class="text-on-surface-variant">' + esc(label) +
+             '</span><span class="font-semibold text-right">' + (valor == null || valor === '' ? '—' : valor) + '</span></div>';
+    };
+    var html = '<div class="space-y-2 text-sm">' +
+      fila('Técnico', esc(t.nombre)) +
+      fila('Usuario', '@' + esc(t.username)) +
+      fila('Correo', esc(t.email)) +
+      fila('Rol', esc(t.rol || 'Técnico')) +
+      fila('Especialidad', esc(t.especialidad)) +
+      fila('Teléfono', esc(t.telefono)) +
+      fila('Dirección', esc(t.direccion)) +
+      fila('Supervisor', t.supervisor_nombre ? esc(t.supervisor_nombre) : 'Sin asignar') +
+      fila('Disponible', t.disponible ? 'Disponible' : 'Ocupado') +
+      '</div>';
+    openModal('Técnico: ' + esc(t.nombre), html, {
+      width: '560px',
+      footer: '<button class="btn btn-primary" data-close>Cerrar</button>',
+    });
+  }
+
+  function openSupervisorDetail(s) {
+    var fila = function (label, valor) {
+      return '<div class="flex justify-between gap-6"><span class="text-on-surface-variant">' + esc(label) +
+             '</span><span class="font-semibold text-right">' + (valor == null || valor === '' ? '—' : valor) + '</span></div>';
+    };
+    var html = '<div class="space-y-2 text-sm">' +
+      fila('Supervisor', esc(s.nombre)) +
+      fila('Usuario', '@' + esc(s.username)) +
+      fila('Correo', esc(s.email)) +
+      fila('Rol', esc(s.rol || 'Supervisor')) +
+      fila('Teléfono', esc(s.telefono)) +
+      fila('Técnicos a cargo', String(s.tecnicos_count != null ? s.tecnicos_count : 0)) +
+      fila('Registro', (s.created_at ? fmtDT(s.created_at) : '—')) +
+      '</div>';
+    openModal('Supervisor: ' + esc(s.nombre), html, {
+      width: '560px',
+      footer: '<button class="btn btn-primary" data-close>Cerrar</button>',
     });
   }
 
@@ -5093,7 +5392,7 @@
     cotizaciones:  { url: '/api/cotizaciones/?search=', nameField: 'numero', subField: 'cliente_nombre', emptyText: 'No se encontraron cotizaciones' },
     pagos: {
       facturas: { url: '/api/facturas/?search=', nameField: 'numero', subField: 'cliente_nombre', emptyText: 'No se encontraron facturas' },
-      pagos:    { url: '/api/pagos/?search=', nameField: 'referencia', subField: 'cliente_nombre', emptyText: 'No se encontraron pagos' }
+      pagos:    { url: '/api/pagos/?search=', nameField: 'cliente_nombre', subField: 'referencia', emptyText: 'No se encontraron pagos' }
     },
     inventario: {
       materiales:  { url: '/api/materiales/?search=', nameField: 'nombre', subField: 'codigo', emptyText: 'No se encontraron materiales' },
@@ -5153,25 +5452,141 @@
     return fetchPage();
   }
 
+  /* ------------------------------------------------------------------
+   * Búsqueda client-side genérica y extensible.
+   *
+   * Registrar un motor por sección:
+   *   clientSideSearch({
+   *     key: 'clientes',              // clave de cache (por sección/tab)
+   *     url: '/api/clientes/',        // endpoint de la LISTA COMPLETA (sin search ni page)
+   *     columns: columns,             // mismas columnas que usa el renderer de la tabla
+   *     filter: function (item, q) { return bool; }
+   *   });
+   *
+   * Comportamiento:
+   *   - La lista completa se cachea UNA sola vez (nunca una lista filtrada).
+   *   - Al escribir se filtra en memoria y se re-renderiza SOLO el tbody
+   *     (no toca #view, no recarga la página, no cierra el teclado móvil).
+   *   - Al vaciar el campo (val.trim() === '') se muestran TODOS de inmediato.
+   *   - Nunca dispara reloadCurrent() al escribir.
+   * ------------------------------------------------------------------ */
+  var CSS_REGISTRY = {};
+  var cssCache = {};
+
+  function clientSideSearch(spec) {
+    if (spec && spec.key) CSS_REGISTRY[spec.key] = spec;
+  }
+
+  // Clave del motor según la sección activa (+ tab cuando la sección es tabulada),
+  // igual criterio que sdCacheKey() para que coincidan caché y registro.
+  function cssKey() {
+    var sec = SD_CONFIG[S.section];
+    if (!sec) return S.section;
+    if (sec.url) return S.section;
+    var s = currentListState();
+    var tab = (s && s.tab) || Object.keys(sec)[0];
+    return S.section + ':' + tab;
+  }
+
+  function cssSpec() {
+    return CSS_REGISTRY[cssKey()] || null;
+  }
+
+  function cssFullList(spec) {
+    if (cssCache[spec.key]) return Promise.resolve(cssCache[spec.key]);
+    var p = spec.source ? Promise.resolve(spec.source())
+                        : sdFetchAll(API_BASE + spec.url);
+    return p.then(function (list) {
+      cssCache[spec.key] = list;   // siempre la lista completa, nunca filtrada
+      return list;
+    });
+  }
+
+  // Invalida la caché completa de una sección (todas sus pestañas).
+  function cssClear(section) {
+    Object.keys(cssCache).forEach(function (k) {
+      if (k === section || k.indexOf(section + ':') === 0) delete cssCache[k];
+    });
+  }
+
+  // Predicado de coincidencia genérico sobre una lista de campos.
+  function cssMatcher(fields) {
+    return function (item, q) {
+      q = q.toLowerCase();
+      for (var i = 0; i < fields.length; i++) {
+        var v = item[fields[i]];
+        if (v === null || v === undefined) continue;
+        v = String(v);
+        if (v.toLowerCase().indexOf(q) >= 0) return true;
+      }
+      return false;
+    };
+  }
+
+  // Registro abreviado y reutilizable:
+  //   cssRegister({ key, url, columns, fields: [...], active: [filtros...] | fn, source: fn|null })
+  // - active: lista de filtros de estado/tipo que desactivan la búsqueda client-side
+  //   (si están activos se conserva el comportamiento de servidor existente y no se rompen).
+  function cssRegister(opts) {
+    var spec = { key: opts.key, url: opts.url, columns: opts.columns };
+    if (typeof opts.filter === 'function') spec.filter = opts.filter;
+    else spec.filter = cssMatcher(opts.fields || []);
+    if (typeof opts.active === 'function') spec.active = opts.active;
+    else if (Array.isArray(opts.active)) {
+      var keys = opts.active;
+      spec.active = function () {
+        var s = currentListState();
+        if (!s) return true;
+        return keys.every(function (f) { return !s[f]; });
+      };
+    }
+    if (typeof opts.source === 'function') spec.source = opts.source;
+    clientSideSearch(spec);
+  }
+
+  function renderCssBody(spec, full) {
+    var input = $('#view [data-search]');
+    var q = input ? input.value.trim() : '';
+    var items = q ? full.filter(function (it) { return spec.filter(it, q); })
+                   : full;   // vacío → TODOS los registros, de inmediato
+    var body = $('#view [data-list-body]');
+    if (body) body.innerHTML = tableRows(spec.columns, items);
+    // Reemplazo el pie de paginación por un contador local (sin recargar nada).
+    var ov = body ? body.closest('.overflow-x-auto') : null;
+    var foot = ov ? ov.nextElementSibling : null;
+    if (foot && foot.querySelector('[data-action="page"]')) {
+      foot.innerHTML = '<div class="flex items-center justify-between gap-2 px-4 py-3">' +
+        '<span class="text-xs text-on-surface-variant">' + items.length + ' registros</span></div>';
+    }
+  }
+
   function renderSearchDropdown(drop, list, query, cfg) {
     cfg = cfg || sdConfig();
     var q = query.toLowerCase();
-    var filtered = q ? list.filter(function (c) {
-      return (c[cfg.nameField] || '').toLowerCase().indexOf(q) >= 0 ||
-             (c[cfg.subField] || '').toLowerCase().indexOf(q) >= 0 ||
-             (c.email || '').toLowerCase().indexOf(q) >= 0;
-    }) : list;
-    if (!filtered.length) {
-      drop.innerHTML = '<div class="sd-empty">' + esc(cfg.emptyText) + '</div>';
-    } else {
-      drop.innerHTML = filtered.map(function (c) {
-        return '<button type="button" data-sd-id="' + c.id + '">' +
-          '<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-container text-[11px] font-bold text-primary">' +
-            esc((c[cfg.nameField] || '?').charAt(0).toUpperCase()) + '</span>' +
-          '<span class="min-w-0 flex-1 truncate"><span class="sd-name">' + esc(c[cfg.nameField]) + '</span>' +
-            (c[cfg.subField] ? ' <span class="sd-sub">' + esc(c[cfg.subField]) + '</span>' : '') + '</span></button>';
-      }).join('');
+    // Las sugerencias existen solo mientras se escribe una búsqueda.
+    // Sin texto o sin coincidencias → se ocultan por completo (nada congelado).
+    if (!q) {
+      drop.innerHTML = '';
+      drop.classList.add('hidden');
+      return;
     }
+    var filtered = list.filter(function (c) {
+      return (c[cfg.nameField] || '').toLowerCase().indexOf(q) >= 0 ||
+             String(c[cfg.subField] || '').toLowerCase().indexOf(q) >= 0 ||
+             (c.email || '').toLowerCase().indexOf(q) >= 0;
+    });
+    if (!filtered.length) {
+      drop.innerHTML = '';
+      drop.classList.add('hidden');
+      return;
+    }
+    drop.innerHTML = filtered.map(function (c) {
+      return '<button type="button" data-sd-id="' + c.id + '">' +
+        '<span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-container text-[11px] font-bold text-primary">' +
+          esc((c[cfg.nameField] || '?').charAt(0).toUpperCase()) + '</span>' +
+        '<span class="min-w-0 flex-1 truncate"><span class="sd-name">' + esc(c[cfg.nameField]) + '</span>' +
+          (c[cfg.subField] ? ' <span class="sd-sub">' + esc(c[cfg.subField]) + '</span>' : '') + '</span></button>';
+    }).join('');
     drop.classList.remove('hidden');
   }
 
@@ -5183,7 +5598,7 @@
     var q = query.toLowerCase();
     var filtered = q ? list.filter(function (c) {
       return (c[cfg.nameField] || '').toLowerCase().indexOf(q) >= 0 ||
-             (c[cfg.subField] || '').toLowerCase().indexOf(q) >= 0 ||
+             String(c[cfg.subField] || '').toLowerCase().indexOf(q) >= 0 ||
              (c.email || '').toLowerCase().indexOf(q) >= 0;
     }) : list;
     if (!filtered.length) {
@@ -5200,6 +5615,34 @@
     drop.classList.remove('hidden');
   }
 
+  // Acción existente que se ejecuta al hacer clic en una fila, según la sección y
+  // pestaña activa. 'detail' = detalle de solo lectura propio. null = sin flujo.
+  function rowClickResolution() {
+    var sec = S.section;
+    var stt = currentListState();
+    var tab = stt ? stt.tab : null;
+    switch (sec) {
+      case 'clientes':
+      case 'tecnicos':
+      case 'supervisores':
+        return 'detail';
+      case 'equipos': return 'historial';
+      case 'mis_equipos': return 'editar';
+      case 'solicitudes': return 'editar';
+      case 'instalaciones': return 'ver';
+      case 'servicios': return 'ver';
+      case 'mantenimientos': return 'editar';
+      case 'visitas': return 'editar';
+      case 'cotizaciones': return 'ver';
+      case 'usuarios': return 'editar';
+      case 'inventario': return tab === 'movimientos' ? null : 'editar';
+      case 'almacen': return tab === 'productos' ? 'editar' : tab === 'categorias' ? 'editar_categoria' : null;
+      case 'pagos': return tab === 'facturas' ? 'ver_factura' : tab === 'pagos' ? 'editar' : null;
+      case 'tienda': return tab === 'ordenes' ? 'ver_orden' : null;
+      default: return null;
+    }
+  }
+
   $('#view').addEventListener('click', function (e) {
     var icon = e.target.closest('[data-search-icon]');
     if (icon) {
@@ -5207,17 +5650,14 @@
       var input = wrap ? wrap.querySelector('[data-search]') : null;
       var drop = wrap ? wrap.querySelector('[data-search-dropdown]') : null;
       if (!input || !drop) return;
+      e.preventDefault();
+      clearTimeout(searchTimer);
       var cfg = sdConfig();
       var key = sdCacheKey();
       if (!cfg || !key) { drop.classList.add('hidden'); return; }
       if (drop.classList.contains('hidden')) {
-        if (input.value.trim()) {
-          input.value = '';
-          var s = currentListState();
-          if (s) { s.search = ''; s.page = 1; reloadCurrent(); }
-        }
         if (sdCache[key] && sdCache[key].length) {
-          renderSearchDropdown(drop, sdCache[key], '', cfg);
+          renderSearchDropdown(drop, sdCache[key], input.value, cfg);
           input.focus();
         } else {
           drop.innerHTML = '<div class="sd-empty">Cargando…</div>';
@@ -5225,7 +5665,7 @@
           sdFetchAll(API_BASE + cfg.url.split('?')[0]).then(function (list) {
             sdCache[key] = list;
             if (drop.classList.contains('hidden')) return;
-            renderSearchDropdown(drop, list, '', cfg);
+            renderSearchDropdown(drop, list, input.value, cfg);
           }).catch(function () {
             drop.innerHTML = '<div class="sd-empty">Error al cargar</div>';
           });
@@ -5260,6 +5700,36 @@
     }
     var mod = e.target.closest('[data-module]');
     if (mod) { goToModule(mod.dataset.module); return; }
+
+    // Clic en la fila → muestra la información del registro reutilizando la acción
+    // existente de esa sección (ver / detalle / historial / editar).
+    // Excluye clics sobre botones de acción (Editar/Eliminar/Ver…) que siguen igual.
+    if (!e.target.closest('[data-action]')) {
+      var row = e.target.closest('#view [data-list-body] tr[data-id]');
+      if (row && row.dataset.id) {
+        var rAction = rowClickResolution();
+        var rId = Number(row.dataset.id);
+        if (rAction === 'detail') {
+          // Detalles de solo lectura propios (Clientes / Técnicos / Supervisores).
+          e.preventDefault();
+          var url = (S.section === 'clientes') ? '/api/clientes/'
+                  : (S.section === 'tecnicos') ? '/api/tecnicos/'
+                  : '/api/supervisores/';
+          getItem(url + rId + '/').then(function (item) {
+            if (S.section === 'clientes') openClienteDetail(item);
+            else if (S.section === 'tecnicos') openTecnicoDetail(item);
+            else openSupervisorDetail(item);
+          });
+          return;
+        }
+        if (rAction) {
+          e.preventDefault();
+          onAction(rAction, rId);
+          return;
+        }
+      }
+    }
+
     var btn = e.target.closest('[data-action]');
     if (!btn) return;
     var action = btn.dataset.action;
@@ -5285,34 +5755,54 @@
   $('#view').addEventListener('input', function (e) {
     if (!e.target.matches('[data-search]')) return;
     var val = e.target.value;
+
+    var spec = cssSpec();
+    if (spec && (!spec.active || spec.active())) {
+      // Búsqueda client-side: filtra la tabla en memoria sin recargar #view,
+      // sin recargar la página y sin cerrar el teclado móvil.
+      clearTimeout(searchTimer);
+      var s = currentListState();
+      if (s) {
+        s.search = val;
+        if (val.trim() === '') s.page = 1;
+      }
+      cssFullList(spec).then(function (full) {
+        if (e.target.value !== val) return;   // la entrada cambió mientras cargaba
+        renderCssBody(spec, full);
+        var cfg = sdConfig();
+        var key = sdCacheKey();
+        var wrap = e.target.closest('.relative');
+        var drop = wrap ? wrap.querySelector('[data-search-dropdown]') : null;
+        if (drop && cfg && key) renderSearchDropdown(drop, full, val.trim(), cfg);
+      });
+      return;
+    }
+
     var cfg = sdConfig();
     var key = sdCacheKey();
     var wrap = e.target.closest('.relative');
     var drop = wrap ? wrap.querySelector('[data-search-dropdown]') : null;
     if (drop && cfg && key) {
-      if (sdCache[key] && sdCache[key].length) {
-        filterSearchDropdown(drop, val, cfg);
-      } else if (val.trim().length >= 2) {
+      var full = sdCache[key];
+      if (val.trim() === '') {
+        var stt = currentListState();
+        if (stt) { stt.search = ''; stt.page = 1; }
+      }
+      if (Array.isArray(full) && full.length) {
+        renderSearchDropdown(drop, full, val.trim(), cfg);
+      } else {
+        drop.innerHTML = '<div class="sd-empty">Cargando…</div>';
+        drop.classList.remove('hidden');
         clearTimeout(sdCacheTimer);
         sdCacheTimer = setTimeout(function () {
-          sdFetchAll(API_BASE + cfg.url.split('?')[0], val.trim()).then(function (list) {
+          sdFetchAll(API_BASE + cfg.url.split('?')[0]).then(function (list) {
             if (key) sdCache[key] = list;
-            if (list.length) renderSearchDropdown(drop, list, val, cfg);
-            else drop.classList.add('hidden');
+            if (drop.classList.contains('hidden')) return;
+            renderSearchDropdown(drop, list, val.trim(), cfg);
           }).catch(function () {});
         }, 300);
-      } else {
-        drop.classList.add('hidden');
       }
     }
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(function () {
-      var s = currentListState();
-      if (!s) return;
-      s.search = val;
-      s.page = 1;
-      reloadCurrent();
-    }, 350);
   });
 
   $('#view').addEventListener('keydown', function (e) {

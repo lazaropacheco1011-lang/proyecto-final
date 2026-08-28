@@ -9,7 +9,7 @@
   var PING_INTERVAL = 12000;
   var PING_TIMEOUT  = 5000;
   var FAIL_THRESHOLD = 2;
-  var API_BASE = window.REFRI_API || 'http://127.0.0.1:8000';
+  var API_BASE = window.REFRI_API || window.location.origin;
 
   var failCount   = 0;
   var isOffline   = false;
@@ -54,7 +54,7 @@
     if (abortCtrl) abortCtrl.abort();
     abortCtrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
 
-    var opts = { method: 'HEAD', mode: 'no-cors' };
+    var opts = { method: 'HEAD', cache: 'no-store', credentials: 'same-origin' };
     if (abortCtrl) opts.signal = abortCtrl.signal;
 
     var timeoutId = setTimeout(function () {

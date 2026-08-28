@@ -5,7 +5,7 @@
 (function () {
   'use strict';
 
-  var API_BASE = window.REFRI_API || 'http://127.0.0.1:8000';
+  var API_BASE = window.REFRI_API || window.location.origin;
 
   function $(sel) { return document.querySelector(sel); }
 

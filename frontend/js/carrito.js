@@ -6,7 +6,7 @@
 
   var API_BASE = new URLSearchParams(location.search).get('api') ||
                  window.REFRI_API ||
-                 'http://127.0.0.1:8000';
+                 window.location.origin;
 
   var ENVIO = { costo: 25000, gratis_desde: 500000 };
 
@@ -51,14 +51,14 @@
 
   function itemRow(it) {
     var lineTotal = (parseFloat(it.precio) || 0) * it.cantidad;
-    return '<div class="flex flex-col gap-4 rounded-3xl border border-outline-variant bg-white p-5 shadow-sm sm:flex-row sm:items-center">' +
-      '<a href="/productos/" class="block h-24 w-full shrink-0 overflow-hidden rounded-xl bg-surface-container sm:w-32">' +
-        '<img src="' + esc(it.imagen) + '" alt="' + esc(it.nombre) + '" class="h-full w-full object-cover" loading="lazy">' +
+    return '<div class="flex w-full min-w-0 flex-col gap-4 rounded-3xl border border-outline-variant bg-white p-5 shadow-sm sm:flex-row sm:items-center">' +
+      '<a href="/productos/" class="block aspect-[4/3] w-full shrink-0 overflow-hidden rounded-xl bg-surface-container sm:h-36 sm:w-44 sm:aspect-auto">' +
+        '<img src="' + esc(it.imagen) + '" alt="' + esc(it.nombre) + '" class="h-full w-full object-contain p-2" loading="lazy">' +
       '</a>' +
       '<div class="min-w-0 flex-1">' +
         '<h3 class="truncate font-headline-md text-headline-md font-bold text-on-surface">' + esc(it.nombre) + '</h3>' +
         '<p class="mt-1 text-sm text-on-surface-variant">Precio unitario: ' + moneyDOP(it.precio) + '</p>' +
-        '<div class="mt-3 flex items-center gap-3">' +
+        '<div class="mt-3 flex flex-wrap items-center gap-3">' +
           '<div class="flex items-center rounded-xl border border-outline-variant">' +
             '<button data-cart-minus="' + it.id + '" type="button" class="px-3 py-2 text-on-surface transition-colors hover:bg-surface-dim" aria-label="Disminuir"><span class="material-symbols-outlined text-sm">remove</span></button>' +
             '<span class="w-12 border-x border-outline-variant py-2 text-center font-bold text-on-surface">' + it.cantidad + '</span>' +

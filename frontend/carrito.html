@@ -133,7 +133,7 @@
     </div>
   </nav>
 
-  <main class="pt-16">
+  <main class="overflow-x-hidden pt-16">
     <!-- ============ CABECERA ============ -->
     <section class="relative overflow-hidden bg-surface-container">
       <div class="pointer-events-none absolute inset-0">
@@ -159,10 +159,10 @@
     <!-- ============ CONTENIDO ============ -->
     <div class="mx-auto w-full max-w-container-max px-lg py-12">
       <div id="cartView" class="grid gap-8 lg:grid-cols-3">
-        <div class="lg:col-span-2">
+        <div class="min-w-0 lg:col-span-2">
           <div id="cartItems"></div>
         </div>
-        <div id="cartSummary"></div>
+        <div id="cartSummary" class="min-w-0"></div>
       </div>
     </div>
   </main>

@@ -12,7 +12,7 @@
    * ------------------------------------------------------------------ */
   var API_BASE = new URLSearchParams(location.search).get('api') ||
                  window.REFRI_API ||
-                 'http://127.0.0.1:8000';
+                 window.location.origin;
 
   var EMPRESA = {
     nombre: 'RefriMaster',

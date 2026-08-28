@@ -93,6 +93,7 @@ body {
 }
 .adm-table tbody tr {
   transition: background-color 0.12s ease;
+  cursor: pointer;
 }
 .adm-table tbody tr:hover {
   background: #F0F9FF;
@@ -311,6 +312,17 @@ body {
   background: #F1F5F9;
   color: #94A3B8;
   cursor: not-allowed;
+}
+
+/* En pantallas pequeñas, los inputs con fuente < 16px hacen que iOS/Safari
+   haga zoom automático al enfocar. Subimos el tamaño solo en móvil para
+   evitarlo; el escritorio conserva su diseño original. */
+@media (max-width: 1023px) {
+  .adm-input,
+  .adm-select,
+  .adm-textarea {
+    font-size: 16px;
+  }
 }
 
 /* ---------- Navegación lateral ---------- */
