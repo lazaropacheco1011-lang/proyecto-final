@@ -194,69 +194,201 @@ class OrdenServicioViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied('Esta orden no está asignada a ti.')
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable,
+        )
+        from django.utils import timezone
         import io
+
+        BRAND = colors.HexColor('#0284C7')
+        BRAND_DARK = colors.HexColor('#075985')
+        BORDER = colors.HexColor('#CBD5E1')
+        ZEBRA = colors.HexColor('#F1F5F9')
+        MUTED = '#94A3B8'
+        INK = colors.HexColor('#0F172A')
+
+        def _esc(value):
+            return (str(value or '')
+                    .replace('&', '&amp;')
+                    .replace('<', '&lt;')
+                    .replace('>', '&gt;'))
+
+        def _fecha(dt):
+            return dt.strftime('%d/%m/%Y') if dt else '—'
+
+        def _fecha_hora(dt):
+            return dt.strftime('%d/%m/%Y %H:%M') if dt else '—'
+
+        R = getSampleStyleSheet()
+        st_titulo = ParagraphStyle('Titulo', parent=R['Title'], fontSize=25, leading=28,
+                                   fontName='Helvetica-Bold', textColor=BRAND_DARK,
+                                   alignment=TA_CENTER, spaceAfter=0)
+        st_sub = ParagraphStyle('Sub', parent=R['Normal'], fontSize=9, leading=12,
+                                textColor=colors.HexColor('#475569'),
+                                alignment=TA_CENTER, spaceAfter=0)
+        st_codigo = ParagraphStyle('Cod', parent=R['Normal'], fontSize=16, leading=20,
+                                   fontName='Helvetica-Bold', textColor=BRAND_DARK)
+        st_estado = ParagraphStyle('Est', parent=R['Normal'], fontSize=9, leading=12,
+                                   fontName='Helvetica-Bold', textColor=colors.white,
+                                   backColor=BRAND, borderPadding=(4, 8, 4, 8))
+        st_sec = ParagraphStyle('Sec', parent=R['Heading2'], fontSize=10, leading=13,
+                                fontName='Helvetica-Bold', textColor=colors.white)
+        st_label = ParagraphStyle('Lab', parent=R['Normal'], fontSize=9, leading=12,
+                                  fontName='Helvetica-Bold', textColor=colors.HexColor('#475569'))
+        st_valor = ParagraphStyle('Val', parent=R['Normal'], fontSize=9, leading=12,
+                                  textColor=INK)
+        st_mat = ParagraphStyle('Mat', parent=R['Normal'], fontSize=9, leading=12, textColor=INK)
+        st_mat_h = ParagraphStyle('MatH', parent=st_mat, fontName='Helvetica-Bold', textColor=colors.white)
+
+        def _barra(titulo):
+            t = Table([[Paragraph(_esc(titulo), st_sec), '']], colWidths=[510], hAlign='LEFT')
+            t.setStyle(TableStyle([
+                ('SPAN', (0, 0), (-1, 0)),
+                ('BACKGROUND', (0, 0), (-1, 0), BRAND),
+                ('BOX', (0, 0), (-1, -1), 0.6, BORDER),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            return t
+
+        def _seccion(titulo, pares):
+            cuerpo = [[Paragraph(_esc(titulo), st_sec), '']]
+            for label, valor in pares:
+                vacio = (valor is None or valor == '' or valor == '—' or valor == '-')
+                texto = '—' if vacio else _esc(valor)
+                if vacio:
+                    texto = f'<font color="{MUTED}">{texto}</font>'
+                cuerpo.append([Paragraph(_esc(label), st_label), Paragraph(texto, st_valor)])
+            t = Table(cuerpo, colWidths=[130, 380], hAlign='LEFT')
+            t.setStyle(TableStyle([
+                ('SPAN', (0, 0), (1, 0)),
+                ('BACKGROUND', (0, 0), (-1, 0), BRAND),
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('BOX', (0, 0), (-1, -1), 0.6, BORDER),
+                ('INNERGRID', (0, 1), (-1, -2), 0.4, colors.HexColor('#E2E8F0')),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            return t
+
+        def _pie(canvas, doc):
+            canvas.saveState()
+            canvas.setStrokeColor(BORDER)
+            canvas.setLineWidth(0.5)
+            canvas.line(45, 36, letter[0] - 45, 36)
+            canvas.setFont('Helvetica-Bold', 8)
+            canvas.setFillColor(BRAND_DARK)
+            canvas.drawString(45, 26, 'REFRIMASTER')
+            canvas.setFont('Helvetica', 7.5)
+            canvas.setFillColor(colors.HexColor(MUTED))
+            canvas.drawString(
+                45, 18,
+                'Sistemas de Refrigeración  ·  Documento generado el '
+                + timezone.now().strftime('%d/%m/%Y %H:%M')
+                + f'  ·  Página {doc.page}',
+            )
+            canvas.restoreState()
 
         buf = io.BytesIO()
         doc = SimpleDocTemplate(
             buf, pagesize=letter,
-            rightMargin=40, leftMargin=40, topMargin=40, bottomMargin=40,
+            rightMargin=45, leftMargin=45, topMargin=45, bottomMargin=55,
         )
-        estilos = getSampleStyleSheet()
         elems = []
-        elems.append(Paragraph(f'Orden de Servicio: {orden.numero}', estilos['Title']))
+
+        # Encabezado
+        elems.append(Paragraph('REFRIMASTER', st_titulo))
+        elems.append(Paragraph('Sistemas de Refrigeración', st_sub))
+        elems.append(Spacer(1, 4))
+        elems.append(HRFlowable(width='100%', thickness=1.5, color=BRAND, spaceBefore=2, spaceAfter=10))
+
+        # Código y estado destacados
+        cabecera = Table(
+            [[Paragraph(_esc('ORDEN DE SERVICIO'), st_codigo),
+              Paragraph(_esc('Estado: ' + orden.get_estado_display()), st_estado)]],
+            colWidths=[330, 180], hAlign='LEFT',
+        )
+        cabecera.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        elems.append(cabecera)
         elems.append(Spacer(1, 12))
 
-        def _row(label, value):
-            return [f'<b>{label}</b>', str(value or '-')]
+        # Información del cliente
+        cliente = orden.cliente if orden.cliente_id else None
+        elems.append(_seccion('Información del cliente', [
+            ('Cliente', (cliente.nombre_completo if cliente else '—')),
+            ('Documento', (cliente.documento_numero if cliente else '—')),
+            ('Equipo', (orden.equipo_nombre or '—')),
+        ]))
+        elems.append(Spacer(1, 10))
 
-        data = [
-            _row('Código', orden.numero),
-            _row('Fecha', str(orden.fecha)),
-            _row('Estado', orden.get_estado_display()),
-            _row('Tipo de servicio', orden.get_tipo_servicio_display()),
-            _row('Cliente', str(orden.cliente)),
-            _row('Equipo', orden.equipo_nombre or '-'),
-            _row('Técnico', orden.tecnico_nombre or '-'),
-            _row('Problema reportado', orden.problema_reportado or '-'),
-            _row('Diagnóstico', orden.diagnostico or '-'),
-            _row('Trabajo realizado', orden.trabajo_realizado or '-'),
-            _row('Observaciones', orden.observaciones or '-'),
-        ]
+        # Información del servicio
+        elems.append(_seccion('Información del servicio', [
+            ('Tipo de servicio', orden.get_tipo_servicio_display()),
+            ('Problema reportado', orden.problema_reportado or '—'),
+            ('Diagnóstico', orden.diagnostico or '—'),
+            ('Trabajo realizado', orden.trabajo_realizado or '—'),
+            ('Observaciones', orden.observaciones or '—'),
+        ]))
+        elems.append(Spacer(1, 10))
+
+        # Técnico asignado
+        tec = orden.tecnico
+        if tec:
+            nombre_tec = tec.user.get_full_name() or tec.user.username
+            rol_tec = tec.user.get_role_display()
+        else:
+            nombre_tec, rol_tec = '', ''
+        elems.append(_seccion('Técnico asignado', [
+            ('Técnico', (nombre_tec or '—')),
+            ('Rol', (rol_tec or '—')),
+        ]))
+        elems.append(Spacer(1, 10))
+
+        # Fechas
+        filas_fechas = [('Fecha de servicio', _fecha(orden.fecha))]
         if orden.fecha_asignacion:
-            data.append(_row('Fecha de asignación', str(orden.fecha_asignacion)))
+            filas_fechas.append(('Fecha de asignación', _fecha_hora(orden.fecha_asignacion)))
         if orden.fecha_finalizacion:
-            data.append(_row('Fecha de finalización', str(orden.fecha_finalizacion)))
+            filas_fechas.append(('Fecha de finalización', _fecha_hora(orden.fecha_finalizacion)))
+        elems.append(_seccion('Fechas', filas_fechas))
+        elems.append(Spacer(1, 10))
 
+        # Materiales necesarios (sin importes financieros)
         materiales = list(orden.materiales_utilizados.select_related('material').all())
         if materiales:
-            elems.append(Paragraph('Materiales necesarios:', estilos['Heading2']))
-            elems.append(Spacer(1, 6))
-            mat_data = [['Material', 'Código', 'Cantidad']]
+            mat_body = [['Material', 'Código', 'Cantidad']]
             for m in materiales:
-                mat_data.append([m.material.nombre, m.material.codigo, str(m.cantidad)])
-            mat_table = Table(mat_data, repeatRows=1)
-            mat_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0284C7')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F1F5F9')]),
+                mat_body.append([
+                    Paragraph(_esc(m.material.nombre), st_mat),
+                    Paragraph(_esc(m.material.codigo), st_mat),
+                    Paragraph(_esc(m.cantidad), st_mat),
+                ])
+            mat_body[0] = [Paragraph(x, st_mat_h) for x in mat_body[0]]
+            mat_t = Table(mat_body, colWidths=[280, 120, 110], hAlign='LEFT', repeatRows=1)
+            mat_t.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), BRAND),
+                ('BOX', (0, 0), (-1, -1), 0.6, BORDER),
+                ('INNERGRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#E2E8F0')),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, ZEBRA]),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ]))
-            elems.append(mat_table)
-            elems.append(Spacer(1, 12))
+            elems.append(_barra('Materiales necesarios'))
+            elems.append(Spacer(1, 4))
+            elems.append(mat_t)
 
-        tabla = Table(data, colWidths=[150, 350])
-        tabla.setStyle(TableStyle([
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#CBD5E1')),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#F1F5F9')]),
-        ]))
-        elems.append(tabla)
-        doc.build(elems)
+        doc.build(elems, onFirstPage=_pie, onLaterPages=_pie)
         buf.seek(0)
         response = HttpResponse(buf.read(), content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename=orden_{orden.numero}.pdf'
