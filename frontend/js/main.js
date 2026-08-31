@@ -299,6 +299,10 @@
       if ($('#profUserInfo')) {
         $('#profUserInfo').textContent = (p.username || '') + (p.role ? ' · ' + (p.role_display || p.role) : '');
       }
+      // "Mis compras" solo se muestra al rol cliente (seguridad: el endpoint
+      // /api/tienda/mis-compras/ ya devuelve 403 para otros roles).
+      var misCompras = $('#misComprasLink');
+      if (misCompras) misCompras.classList.toggle('hidden', p.role !== 'cliente');
       setProfMsg('', '');
       openModal('profile');
     } catch (e) {
