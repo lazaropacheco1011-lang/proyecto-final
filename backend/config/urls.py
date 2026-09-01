@@ -8,6 +8,7 @@ from django.contrib import admin
 from django.http import FileResponse, Http404
 from django.urls import include, path, re_path
 from django.views.generic import RedirectView
+from django.views.static import serve
 
 from config.settings import env_bool
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -142,3 +143,15 @@ if admin_enabled:
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+else:
+    # En producción también se sirve /media/ (archivos subidos) apuntando al
+    # disco persistente de Render. Nota: el helper `static()` de Django es un
+    # no-op cuando DEBUG=False (Django 6), por eso se registra la ruta con
+    # re_path + la vista `serve` directamente. Los estáticos los sirve WhiteNoise.
+    urlpatterns += [
+        re_path(
+            r'^media/(?P<path>.*)$',
+            serve,
+            kwargs={'document_root': settings.MEDIA_ROOT},
+        ),
+    ]

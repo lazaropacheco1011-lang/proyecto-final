@@ -685,3 +685,133 @@ body {
     scroll-behavior: auto;
   }
 }
+
+/* ==========================================================================
+   MODO OSCURO — RefriMaster
+   ==========================================================================
+   Regla: el modo claro NO se toca. Estos estilos SOLO se activan cuando
+   <html> tiene el atributo data-theme="dark" (activado por el selector ☀️/🌙).
+   Se adaptan únicamente superficies, fondos, bordes y textos; los colores de
+   marca de RefriMaster (azul, botones, iconos, acentos, estados) permanecen
+   intactos. El Hero y el panel administrativo no se ven afectados.
+   ========================================================================== */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Transición suave y discreta al alternar el tema (no afecta colores en reposo) */
+html[data-theme="dark"] body,
+html[data-theme="dark"] body * {
+  transition: background-color 0.3s ease, border-color 0.3s ease,
+              color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* ---------- Superficies y fondos (utilidades Tailwind) ---------- */
+html[data-theme="dark"] .bg-background { background-color: #0B1220; }
+html[data-theme="dark"] .bg-surface { background-color: #0F172A; }
+html[data-theme="dark"] .bg-surface-dim { background-color: #111827; }
+html[data-theme="dark"] .bg-surface-container { background-color: #0F1B2E; }
+html[data-theme="dark"] .bg-surface-container-low { background-color: #0B1220; }
+html[data-theme="dark"] .bg-surface-container-high { background-color: #16233A; }
+html[data-theme="dark"] .bg-surface-variant { background-color: #1E293B; }
+
+/* Blancos sólidos / de navegación / modales (NO los /10 /15 /25 del Hero) */
+html[data-theme="dark"] .bg-white { background-color: #0F172A; }
+html[data-theme="dark"] .bg-white\/90 { background-color: rgba(15, 23, 42, 0.92); }
+html[data-theme="dark"] .bg-white\/80 { background-color: rgba(15, 23, 42, 0.9); }
+
+/* ---------- Bordes ---------- */
+html[data-theme="dark"] .border-outline-variant { border-color: #2B3A52; }
+html[data-theme="dark"] .border-slate-800 { border-color: #1E293B; }
+
+/* ---------- Textos (solo los oscuros que van sobre superficies claras) ---------- */
+html[data-theme="dark"] .text-on-surface { color: #E2E8F0; }
+html[data-theme="dark"] .text-on-surface-variant { color: #94A3B8; }
+html[data-theme="dark"] .text-slate-700 { color: #CBD5E1; }
+html[data-theme="dark"] .text-slate-600 { color: #94A3B8; }
+html[data-theme="dark"] .text-slate-700:hover,
+html[data-theme="dark"] .text-slate-600:hover { color: #F1F5F9; }
+
+/* ---------- Inputs y etiquetas ---------- */
+html[data-theme="dark"] .input {
+  background: #0F172A;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+html[data-theme="dark"] .input::placeholder { color: #64748B; }
+html[data-theme="dark"] .field-label { color: #94A3B8; }
+
+/* ---------- Chips y tiles de categoría (superficies) ---------- */
+html[data-theme="dark"] .almacen-chip {
+  background: #0F172A;
+  border-color: #2B3A52;
+  color: #CBD5E1;
+}
+html[data-theme="dark"] .cat-tile {
+  background: #0F172A;
+  border-color: #2B3A52;
+  color: #E2E8F0;
+}
+html[data-theme="dark"] .cat-tile .tile-sub { color: #94A3B8; }
+
+/* ---------- Paginación ---------- */
+html[data-theme="dark"] .pager { border-top-color: #2B3A52; }
+html[data-theme="dark"] .pager-btn {
+  background: #0F172A;
+  border-color: #2B3A52;
+  color: #CBD5E1;
+}
+
+/* ---------- Tarjetas KPI ---------- */
+html[data-theme="dark"] .kpi-card {
+  background: #0F172A;
+  border-color: #2B3A52;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 6px 18px -10px rgba(0, 0, 0, 0.5);
+}
+html[data-theme="dark"] .kpi-value { color: #F1F5F9; }
+html[data-theme="dark"] .kpi-label { color: #CBD5E1; }
+html[data-theme="dark"] .kpi-hint { color: #64748B; }
+
+/* ---------- Filtro segmented de disponibilidad ---------- */
+html[data-theme="dark"] .av-seg { background: #111827; border-color: #2B3A52; }
+html[data-theme="dark"] .av-btn { color: #94A3B8; }
+html[data-theme="dark"] .av-btn.active {
+  background: #0F172A;
+  color: #0EA5E9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- Opciones de pago ---------- */
+html[data-theme="dark"] .pay-card {
+  background: #0F172A;
+  border-color: #334155;
+}
+
+/* ---------- Botones de gestión (staff) ---------- */
+html[data-theme="dark"] .gest-btn {
+  background: #0F172A;
+  border-color: #2B3A52;
+  color: #CBD5E1;
+}
+
+/* ---------- WhatsApp por producto ---------- */
+html[data-theme="dark"] .wa-btn {
+  background: #0F172A;
+  border-color: rgba(37, 211, 102, 0.5);
+  color: #34D399;
+}
+
+/* ---------- Glass card / hero (sin filtros ni brillo) ---------- */
+html[data-theme="dark"] .glass-card {
+  background: rgba(15, 23, 42, 0.8);
+  border-color: rgba(51, 65, 85, 0.6);
+}
+
+/* ---------- Scrollbar coherente con el tema ---------- */
+html[data-theme="dark"] ::-webkit-scrollbar-track { background: #0B1220; }
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-color: #0B1220;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #475569; }

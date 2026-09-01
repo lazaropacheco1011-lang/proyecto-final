@@ -98,3 +98,87 @@
     start();
   }
 })();
+
+/* ==========================================================================
+   MODO OSCURO — RefriMaster (compartido por el sitio público)
+   - Solo se aplica en páginas públicas; el panel administrativo se ignora.
+   - Guarda la preferencia en localStorage; si el usuario no eligió, detecta
+     prefers-color-scheme del dispositivo.
+   - El atributo data-theme en <html> dispara los overrides de CSS (modo oscuro
+     adapta superficies/fondos/bordes/textos sin tocar los colores de marca).
+   ========================================================================== */
+(function () {
+  'use strict';
+
+  if (location.pathname.indexOf('admin-dashboard') !== -1) return;
+
+  var STORAGE_KEY = 'refri_theme';
+  var root = document.documentElement;
+
+  function themeFromStorage() {
+    try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
+  }
+
+  function storeTheme(theme) {
+    try { localStorage.setItem(STORAGE_KEY, theme); } catch (e) { /* ignorar */ }
+  }
+
+  function detectSystem() {
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'dark'
+      : 'light';
+  }
+
+  function currentTheme() {
+    var saved = themeFromStorage();
+    return (saved === 'dark' || saved === 'light') ? saved : detectSystem();
+  }
+
+  function applyTheme(theme) {
+    if (theme === 'dark') root.setAttribute('data-theme', 'dark');
+    else root.removeAttribute('data-theme');
+    syncIcons(theme);
+  }
+
+  function syncIcons(theme) {
+    var icons = document.querySelectorAll('[data-theme-icon]');
+    var label = theme === 'dark' ? 'dark_mode' : 'light_mode';
+    var aria = theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+    for (var i = 0; i < icons.length; i++) {
+      icons[i].textContent = label;
+      var btn = icons[i].closest('[data-theme-toggle]');
+      if (btn) {
+        btn.setAttribute('aria-label', aria);
+        btn.setAttribute('title', aria);
+      }
+    }
+  }
+
+  function initTheme() {
+    applyTheme(currentTheme());
+
+    var toggles = document.querySelectorAll('[data-theme-toggle]');
+    for (var i = 0; i < toggles.length; i++) {
+      toggles[i].addEventListener('click', function () {
+        var next = currentTheme() === 'dark' ? 'light' : 'dark';
+        storeTheme(next);
+        applyTheme(next);
+      });
+    }
+
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onChange = function () {
+        if (!themeFromStorage()) applyTheme(detectSystem());
+      };
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', onChange);
+      else if (typeof mq.addListener === 'function') mq.addListener(onChange);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTheme);
+  } else {
+    initTheme();
+  }
+})();

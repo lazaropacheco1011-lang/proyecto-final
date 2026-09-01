@@ -39,7 +39,10 @@ ALLOWED_HOSTS = [
 ]
 
 # Cabeceras de seguridad (activas por defecto fuera de DEBUG).
-SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', False)
+# Render termina el TLS en su proxy; confiamos en X-Forwarded-Proto para
+# que request.is_secure() y SECURE_SSL_REDIRECT funcionen correctamente.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', not DEBUG)
 SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', not DEBUG)
 CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', not DEBUG)
 SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0' if DEBUG else '31536000'))
@@ -91,6 +94,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -180,7 +184,9 @@ STATICFILES_DIRS = [
 ]
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+# MEDIA_ROOT configurable por entorno para poder montar un Persistent Disk de
+# Render en producción (los uploads persisten entre deploys).
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', str(BASE_DIR / 'media'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -244,6 +250,13 @@ CORS_ALLOWED_ORIGINS = [
     o.strip() for o in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',') if o.strip()
 ]
 CORS_ALLOW_CREDENTIALS = env_bool('CORS_ALLOW_CREDENTIALS', True)
+
+# Orígenes HTTPS de confianza para CSRF (se define por variable de entorno,
+# sin dominio fijo en el código). Django rechaza POSTs salvo que el origen
+# coincida con esta lista en producción.
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
+]
 
 # ---------------------------------------------------------------------------
 # Correo electrónico
