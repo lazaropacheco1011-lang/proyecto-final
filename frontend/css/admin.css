@@ -929,3 +929,259 @@ body {
   font-size: 13px;
   color: #475569;
 }
+
+/* ==========================================================================
+   MODO OSCURO — Panel de Administración (RefriMaster)
+   Regla: el modo claro NO se toca. Estos estilos SOLO se activan cuando
+   <html> tiene el atributo data-theme="dark" (activado por el selector ☀️/🌙
+   del header). Adaptan únicamente superficies, fondos, bordes y textos de los
+   componentes definidos en admin.css; los colores de marca (azul, botones,
+   estados, badges, acentos) permanecen intactos. Se usa la misma paleta
+   oscura que el sitio público (#0F172A superficies, #2B3A52/#334155 bordes).
+   ========================================================================== */
+
+/* ---------- Tarjetas ---------- */
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .panel-card {
+  background: #0F172A;
+  border-color: #2B3A52;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* ---------- Accesos rápidos (módulos) ---------- */
+html[data-theme="dark"] .module-card {
+  background: #0F172A;
+  border-color: #2B3A52;
+  color: #CBD5E1;
+}
+html[data-theme="dark"] .module-card-label {
+  color: #E2E8F0;
+}
+html[data-theme="dark"] .module-card-icon {
+  background: rgba(2, 132, 199, 0.18);
+  color: #38BDF8;
+}
+
+/* ---------- Banner informativo ---------- */
+html[data-theme="dark"] .info-banner {
+  background: rgba(2, 132, 199, 0.14);
+  border-color: #2B3A52;
+  color: #7DD3FC;
+}
+
+/* ---------- Tablas ---------- */
+html[data-theme="dark"] .adm-table thead th {
+  background: #0F172A;
+  color: #94A3B8;
+  border-bottom-color: #2B3A52;
+}
+html[data-theme="dark"] .adm-table tbody td {
+  border-bottom-color: #1E293B;
+}
+html[data-theme="dark"] .adm-table tbody tr:hover {
+  background: rgba(2, 132, 199, 0.12);
+}
+
+/* ---------- Botones ghost / secundarios ---------- */
+html[data-theme="dark"] .btn-ghost {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+html[data-theme="dark"] .btn-ghost:hover:not(:disabled) {
+  background: #1E293B;
+}
+
+/* ---------- Formularios ---------- */
+html[data-theme="dark"] .adm-input,
+html[data-theme="dark"] .adm-select,
+html[data-theme="dark"] .adm-textarea {
+  background: #0F172A;
+  border-color: #334155;
+  color: #E2E8F0;
+}
+html[data-theme="dark"] .adm-input::placeholder,
+html[data-theme="dark"] .adm-textarea::placeholder {
+  color: #64748B;
+}
+html[data-theme="dark"] .adm-input:focus,
+html[data-theme="dark"] .adm-select:focus,
+html[data-theme="dark"] .adm-textarea:focus {
+  border-color: #38BDF8;
+  box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+html[data-theme="dark"] .adm-input[disabled],
+html[data-theme="dark"] .adm-select[disabled] {
+  background: #111827;
+  color: #64748B;
+}
+html[data-theme="dark"] .field-label {
+  color: #CBD5E1;
+}
+
+/* ---------- Navegación lateral ---------- */
+html[data-theme="dark"] .nav-item {
+  color: #94A3B8;
+}
+html[data-theme="dark"] .nav-item:hover {
+  background: rgba(2, 132, 199, 0.14);
+  color: #7DD3FC;
+}
+html[data-theme="dark"] .nav-group-label:hover {
+  background: #1E293B;
+  color: #CBD5E1;
+}
+html[data-theme="dark"] .nav-group-label .material-symbols-outlined {
+  color: #94A3B8;
+}
+
+/* ---------- Sidebar collapsed (desktop) ---------- */
+html[data-theme="dark"] .sidebar-closed .sidebar-header .sidebar-toggle-btn {
+  background: #0F172A;
+  border-color: #2B3A52;
+  color: #CBD5E1;
+}
+
+/* ---------- Modal ---------- */
+html[data-theme="dark"] .modal-panel {
+  background: #0F172A;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* ---------- Barra de progreso / skeletons ---------- */
+html[data-theme="dark"] .bar-track {
+  background: rgba(2, 132, 199, 0.2);
+}
+html[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #1E293B 25%, #16233A 50%, #1E293B 75%);
+  background-size: 200% 100%;
+}
+
+/* ---------- Notificaciones ---------- */
+html[data-theme="dark"] .notif-dropdown {
+  background: #0F172A;
+  border-color: #2B3A52;
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.7);
+}
+html[data-theme="dark"] .notif-item {
+  border-bottom-color: #1E293B;
+}
+html[data-theme="dark"] .notif-item:hover {
+  background: rgba(2, 132, 199, 0.12);
+}
+html[data-theme="dark"] .notif-item.unread {
+  background: #111827;
+}
+html[data-theme="dark"] .notif-item .notif-ico {
+  background: rgba(2, 132, 199, 0.18);
+  color: #38BDF8;
+}
+html[data-theme="dark"] .notif-item .notif-ico.tipo-ASIGNACION { background: rgba(22, 163, 74, 0.18); color: #4ADE80; }
+html[data-theme="dark"] .notif-item .notif-ico.tipo-CAMBIO_ESTADO { background: rgba(180, 83, 9, 0.18); color: #FBBF24; }
+html[data-theme="dark"] .notif-item .notif-ico.tipo-FINALIZACION { background: rgba(185, 28, 28, 0.18); color: #F87171; }
+html[data-theme="dark"] .notif-item .notif-ico.tipo-MANTENIMIENTO { background: rgba(14, 116, 144, 0.18); color: #22D3EE; }
+
+/* ---------- Calendario ---------- */
+html[data-theme="dark"] .cal-cell {
+  background: #0F172A;
+  border-color: #2B3A52;
+}
+html[data-theme="dark"] .cal-cell:hover {
+  border-color: #38BDF8;
+}
+html[data-theme="dark"] .cal-cell.outside {
+  background: #111827;
+}
+html[data-theme="dark"] .cal-cell.selected {
+  border-color: #38BDF8;
+  background: rgba(2, 132, 199, 0.2);
+}
+html[data-theme="dark"] .cal-num {
+  color: #CBD5E1;
+}
+html[data-theme="dark"] .cal-cell.today .cal-num {
+  background: #0284C7;
+  color: #ffffff;
+}
+html[data-theme="dark"] .cal-event {
+  background: rgba(2, 132, 199, 0.2);
+  color: #7DD3FC;
+}
+html[data-theme="dark"] .cal-event:hover {
+  background: rgba(2, 132, 199, 0.32);
+}
+html[data-theme="dark"] .timeline {
+  border-left-color: #2B3A52;
+}
+html[data-theme="dark"] .timeline-item::before {
+  border-color: #0F172A;
+}
+
+/* ---------- Mapa ---------- */
+html[data-theme="dark"] .map-container {
+  border-color: #2B3A52;
+}
+
+/* ---------- Firma / evidencias / detalle ---------- */
+html[data-theme="dark"] .sig-canvas-wrap {
+  background: #0F172A;
+  border-color: #334155;
+}
+html[data-theme="dark"] .evid-thumb {
+  border-color: #2B3A52;
+}
+html[data-theme="dark"] .evid-thumb .evid-cap {
+  background: #111827;
+  color: #CBD5E1;
+}
+html[data-theme="dark"] .det-grid .det-value {
+  color: #E2E8F0;
+}
+
+/* ---------- Chips de horarios ---------- */
+html[data-theme="dark"] .slot-chip {
+  background: #0F172A;
+  border-color: #334155;
+  color: #CBD5E1;
+}
+html[data-theme="dark"] .slot-chip:hover {
+  border-color: #38BDF8;
+  color: #7DD3FC;
+}
+html[data-theme="dark"] .slot-chip.active {
+  background: #0284C7;
+  border-color: #0284C7;
+  color: #ffffff;
+}
+
+/* ---------- Perfil ---------- */
+html[data-theme="dark"] .profile-photo {
+  border-color: #0F172A;
+  box-shadow: 0 0 0 1px #2B3A52, 0 8px 16px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Dropdown de búsqueda ---------- */
+html[data-theme="dark"] [data-search-dropdown] button:hover {
+  background-color: #1E293B;
+}
+html[data-theme="dark"] [data-search-dropdown] .sd-name {
+  color: #E2E8F0;
+}
+html[data-theme="dark"] [data-search-dropdown] .sd-sub {
+  color: #94A3B8;
+}
+
+/* ---------- Scrollbar del panel ---------- */
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #0B1220;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-color: #0B1220;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+html[data-theme="dark"] .sidebar-nav::-webkit-scrollbar-thumb {
+  background: #334155;
+}

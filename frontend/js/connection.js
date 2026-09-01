@@ -100,8 +100,9 @@
 })();
 
 /* ==========================================================================
-   MODO OSCURO — RefriMaster (compartido por el sitio público)
-   - Solo se aplica en páginas públicas; el panel administrativo se ignora.
+   MODO OSCURO — RefriMaster (compartido por el sitio público y admin)
+   - Se aplica en el sitio público y, desde aquí, también en el panel de
+     administración (admin-dashboard.html incluye el selector ☀️/🌙).
    - Guarda la preferencia en localStorage; si el usuario no eligió, detecta
      prefers-color-scheme del dispositivo.
    - El atributo data-theme en <html> dispara los overrides de CSS (modo oscuro
@@ -109,8 +110,6 @@
    ========================================================================== */
 (function () {
   'use strict';
-
-  if (location.pathname.indexOf('admin-dashboard') !== -1) return;
 
   var STORAGE_KEY = 'refri_theme';
   var root = document.documentElement;
