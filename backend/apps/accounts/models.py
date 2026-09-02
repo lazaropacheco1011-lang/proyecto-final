@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
 
+from apps.accounts.storage import SupabaseStorage
+
 
 class User(AbstractUser):
     """Usuario del sistema con rol (RF-01, RF-03, RNF-03)."""
@@ -24,6 +26,7 @@ class User(AbstractUser):
     photo = models.ImageField(
         'foto de perfil',
         upload_to='fotos_perfil/',
+        storage=SupabaseStorage(),
         blank=True,
         null=True,
     )

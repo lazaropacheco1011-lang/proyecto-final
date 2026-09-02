@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.utils.text import get_valid_filename
@@ -13,6 +15,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.accounts.models import Supervisor, Tecnico
+from apps.accounts.storage import SupabaseStorageError
 from apps.accounts.services import (
     CorreoNoEnviado,
     buscar_token,
@@ -49,6 +52,7 @@ from apps.core.permissions import (
 from apps.core.services import register_audit
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 # Tipos de imagen aceptados para la foto de perfil y tamaño máximo.
 PERFIL_IMAGEN_CONTENT_TYPES = {
@@ -296,8 +300,15 @@ class MeView(viewsets.GenericViewSet):
 
         Subida:  ``POST multipart`` con el campo ``foto`` (imagen ≤ 5 MB).
         Borrado: ``POST`` JSON con ``{"eliminar": true}`` (restablece el avatar).
+
+        En el reemplazo el orden es: (1) se sube la NUEVA foto a Supabase; (2)
+        solo si la subida tuvo éxito se borra la anterior. Nunca se borra la
+        anterior antes de garantizar la nueva, y no se deja estado pendiente
+        entre peticiones (el hilo/gunicorn se reutiliza, así que un estado por
+        hilo podría borrar la foto de otro usuario).
         """
         user = request.user
+        storage = user.photo.storage
         if request.data.get('eliminar') in ('true', '1', True):
             if user.photo:
                 user.photo.delete(save=True)
@@ -332,16 +343,39 @@ class MeView(viewsets.GenericViewSet):
             )
         archivo.seek(0)
 
-        if user.photo:
-            user.photo.delete(save=False)
+        # Foto anterior (si existe) y nombre único para la nueva: al reemplazar
+        # cambia la URL, lo que evita cachés y colisiones en el bucket.
+        old_name = user.photo.name if user.photo else None
         import uuid
         nombre = get_valid_filename(archivo.name or 'foto')
         ext = PERFIL_IMAGEN_CONTENT_TYPES[content_type]
         if not nombre.lower().endswith(ext):
             nombre += ext
-        # Nombre único para que al reemplazar la foto cambie la URL.
         nombre = f'{uuid.uuid4().hex}_{nombre}'
-        user.photo.save(nombre, archivo, save=True)
+        new_name = user.photo.field.generate_filename(user, nombre)
+
+        try:
+            saved = storage.save(new_name, archivo)
+        except SupabaseStorageError as exc:
+            logger.error('No se pudo subir la foto de %s: %s', user.username, exc)
+            return Response(
+                {'error': 'No se pudo guardar la foto en el servidor. '
+                          'Verifica tu conexión e intenta de nuevo.'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # La nueva ya está en Supabase: recién aquí se elimina la anterior.
+        if old_name and old_name != saved:
+            try:
+                storage.delete(old_name)
+            except SupabaseStorageError as exc:
+                logger.warning(
+                    'Foto anterior de %s no eliminada (%s): %s',
+                    user.username, old_name, exc,
+                )
+
+        user.photo.name = saved
+        user.save(update_fields=['photo'])
         register_audit(user, 'actualizar', user, model_name='accounts.user')
         return Response({
             'message': 'Foto de perfil actualizada.',
