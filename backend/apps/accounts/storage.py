@@ -39,6 +39,21 @@ _SUPABASE_URL_ENV = 'SUPABASE_URL'
 _SUPABASE_SECRET_ENV = 'SUPABASE_SECRET_KEY'
 
 
+def _auth_headers(secret):
+    """Headers de autenticación compatibles con Supabase Storage.
+
+    Las claves nuevas de Supabase (formato ``sb_secret_...``) se envían en el
+    header ``apikey``. Las claves JWT heredadas (``eyJ...``) se envían como
+    ``Authorization: Bearer <jwt>``. Se incluye ``apikey`` siempre y además
+    ``Authorization`` solo si la clave parece un JWT, para soportar ambos
+    formatos sin romper la degradación a FileSystemStorage.
+    """
+    headers = {'apikey': secret}
+    if secret.startswith('eyJ'):
+        headers['Authorization'] = 'Bearer {}'.format(secret)
+    return headers
+
+
 class SupabaseStorageError(RuntimeError):
     """Error al operar con Supabase Storage."""
 
@@ -109,7 +124,7 @@ class SupabaseStorage(Storage):
             base, self.bucket, urllib.parse.quote(name, safe='/'),
         )
         request = urllib.request.Request(url, data=data, method='POST', headers={
-            'Authorization': 'Bearer {}'.format(secret),
+            **_auth_headers(secret),
             'Content-Type': content_type,
             'x-upsert': 'true',
         })
@@ -163,9 +178,7 @@ class SupabaseStorage(Storage):
             return self._local_fs.exists(name)
         url = self._endpoint('public', name)
         _, secret = self._config()
-        request = urllib.request.Request(url, method='HEAD', headers={
-            'Authorization': 'Bearer {}'.format(secret),
-        })
+        request = urllib.request.Request(url, method='HEAD', headers=_auth_headers(secret))
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 return getattr(response, 'status', 200) < 400
@@ -206,9 +219,7 @@ class SupabaseStorage(Storage):
         url = '{}/storage/v1/object/{}/{}'.format(
             base, self.bucket, urllib.parse.quote(name, safe='/'),
         )
-        request = urllib.request.Request(url, method='DELETE', headers={
-            'Authorization': 'Bearer {}'.format(secret),
-        })
+        request = urllib.request.Request(url, method='DELETE', headers=_auth_headers(secret))
         try:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 status = getattr(response, 'status', 200)
