@@ -359,8 +359,15 @@
         var fd = new FormData();
         fd.append('foto', archivo);
         var res = await apiAuth('/api/auth/me/foto/', { method: 'POST', body: fd });
-        var data = await res.json();
-        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var texto = await res.text();
+        var data = null;
+        try { data = texto ? JSON.parse(texto) : null; } catch (e) { data = null; }
+        if (!res.ok) {
+          var motivo = (data && (data.error || data.detail))
+            ? data.error || data.detail
+            : ('Error ' + res.status);
+          throw new Error(motivo);
+        }
         if (data && data.user && data.user.photo) {
           var nuevoUser = Object.assign({}, JSON.parse(localStorage.getItem('refri_user') || '{}'),
             { photo: data.user.photo });
@@ -370,7 +377,7 @@
         }
         setProfMsg('Foto de perfil actualizada.', 'success');
       } catch (err) {
-        setProfMsg('No se pudo subir la foto. Verifica que sea una imagen válida.', 'error');
+        setProfMsg('No se pudo subir la foto: ' + (err && err.message ? err.message : 'error inesperado.'), 'error');
       } finally {
         setBusy('#profPhotoBtn', false);
       }

@@ -188,6 +188,13 @@ MEDIA_URL = '/media/'
 # Render en producción (los uploads persisten entre deploys).
 MEDIA_ROOT = os.getenv('MEDIA_ROOT', str(BASE_DIR / 'media'))
 
+# Límites de subida de archivos. La app permite fotos de perfil de hasta 5 MB
+# (MAX_FOTO_PERFIL_SIZE), por lo que se suben los límites globales de Django por
+# encima de ese valor para que el request no se rechace antes de llegar a la
+# validación lógica de la vista (el default de Django es ~2.5 MB).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024  # 6 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024  # 6 MB
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # ---------------------------------------------------------------------------
