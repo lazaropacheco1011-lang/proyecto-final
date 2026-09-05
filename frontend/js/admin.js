@@ -1435,10 +1435,12 @@
           if (!ok) { forceLogin(); throw new Error('Sesión expirada.'); }
           return apiUpload(path, formData);
         });
-        return res.json().then(function (d) {
+        return res.text().then(function (text) {
+          var d = null;
+          try { d = JSON.parse(text); } catch (e) { d = null; }
           if (!res.ok) {
             var err = new Error('API error ' + res.status);
-            err.status = res.status; err.data = d;
+            err.status = res.status; err.data = d; err.body = text;
             throw err;
           }
           return d;
@@ -3793,7 +3795,14 @@
         toast(r.message || 'Foto de perfil actualizada.', 'success');
         reloadCurrent();
       })
-      .catch(function (err) { toast(apiErrorMessage(err), 'error'); })
+      .catch(function (err) {
+        var d = err && err.data;
+        if (!d && err && err.body) {
+          var texto = String(err.body).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+          d = texto ? { detail: 'Error HTTP ' + err.status + ': ' + texto.slice(0, 300) } : { detail: 'Error HTTP ' + err.status };
+        }
+        toast(apiErrorMessage(Object.assign({}, err, { data: d || null })), 'error');
+      })
       .then(function () { setBusy(btn, false); });
   }
 
