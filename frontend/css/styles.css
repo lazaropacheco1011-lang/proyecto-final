@@ -956,6 +956,44 @@ nav[class~="fixed"] #mobileMenu {
   -webkit-backdrop-filter: blur(18px);
 }
 
+/* ---------- Enlaces de navegación del header — texto limpio ----------
+   Sin caja alrededor de cada enlace: sin fondo permanente, sin borde, sin
+   superficie ni blur por enlace (el glass vive en el nav completo, regla de
+   arriba). En hover solo aparece un tinte primario muy tenue con transparencia;
+   el cambio de color a primary lo aporta la utilidad hover:text-primary del
+   HTML. La página activa muestra un indicador elegante debajo del texto: una
+   barrita corta redondeada en color primary (neutraliza el border-b-2 que
+   trae Tailwind para que no queden dos líneas). Colores existentes
+   únicamente (primary #0284C7). Sin gradientes, sin cambios de tamaños ni
+   posiciones. */
+nav[class~="fixed"] a[class~="font-body-md"] {
+  position: relative;
+  background-color: transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+nav[class~="fixed"] a[class~="font-body-md"]:hover {
+  background-color: rgba(2, 132, 199, 0.06);
+}
+nav[class~="fixed"] a[class~="font-body-md"]:focus-visible {
+  outline: 2px solid rgba(2, 132, 199, 0.45);
+  outline-offset: 2px;
+}
+/* Página actual: la clase border-primary marca el enlace activo en el HTML */
+nav[class~="fixed"] a[class~="font-body-md"][class~="border-primary"] {
+  border-bottom: 0;
+}
+nav[class~="fixed"] a[class~="font-body-md"][class~="border-primary"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -0.4rem;
+  width: 1.6rem;
+  height: 2px;
+  border-radius: 9999px;
+  background-color: var(--color-primary, #0284C7);
+  transform: translateX(-50%);
+}
+
 /* ==========================================================================
    MODO OSCURO — RefriMaster
    ==========================================================================
@@ -1124,6 +1162,15 @@ html[data-theme="dark"] nav[class~="fixed"] #mobileMenu {
   background-color: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
+}
+
+/* ---------- Enlaces de navegación del header — dark: solo hover tenue ----------
+   En modo oscuro los enlaces siguen siendo texto plano (sin caja ni fondo en
+   reposo); en hover se añade un tinte primario translúcido muy fino para que
+   el glass del nav no se pierda. El indicador de la página activa es primary
+   (#0284C7), igual en ambos modos. */
+html[data-theme="dark"] nav[class~="fixed"] a[class~="font-body-md"]:hover {
+  background-color: rgba(2, 132, 199, 0.14);
 }
 
 /* ---------- Glass card / hero (sin filtros ni brillo) ---------- */
