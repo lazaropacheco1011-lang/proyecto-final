@@ -563,9 +563,12 @@ body {
   width: 56px;
   height: 56px;
   border-radius: 9999px;
-  background: #25d366;
+  background: rgba(37, 211, 102, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #fff;
-  box-shadow: 0 10px 25px -6px rgba(37, 211, 102, 0.6);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 10px 25px -6px rgba(37, 211, 102, 0.6);
   opacity: 1;
   transform: translateY(0);
   transition: transform 0.4s ease, box-shadow 0.2s ease, background 0.2s ease, opacity 0.4s ease;
@@ -577,9 +580,10 @@ body {
 }
 
 .wa-float:hover {
-  background: #1fb958;
+  background: rgba(31, 185, 88, 0.92);
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 16px 30px -8px rgba(37, 211, 102, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 16px 30px -8px rgba(37, 211, 102, 0.7);
 }
 
 .wa-float svg {
@@ -687,6 +691,272 @@ body {
 }
 
 /* ==========================================================================
+   BOTONES — Refinamiento visual (profundidad, foco y estados sutil)
+   Únicamente presentación: NO cambia colores, tamaños ni disposición.
+   Añade sombras suaves, transiciones, presión al hacer click y foco
+   accesible sobre las clases y utilidades existentes.
+   ========================================================================== */
+
+button,
+input[type="button"],
+input[type="submit"] {
+  font-family: inherit;
+}
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Iconos dentro de botones: nunca se comprimen ni desalinean */
+button .material-symbols-outlined,
+input[type="button"] .material-symbols-outlined {
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* Botones de icono del header (carrito, tema, menú) — vidrio muy sutil
+   en modo claro; solo botones pequeños (p-2), nunca tarjetas ni enlaces. */
+button[class~="rounded-lg"][class~="p-2"] {
+  background-color: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background-color 0.18s ease, box-shadow 0.18s ease, transform 0.12s ease,
+              color 0.18s ease;
+}
+button[class~="rounded-lg"][class~="p-2"]:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.75);
+  box-shadow: 0 2px 8px -4px rgba(15, 23, 42, 0.14);
+}
+button[class~="rounded-lg"][class~="p-2"]:active:not(:disabled) {
+  transform: translateY(0) scale(0.95);
+}
+
+/* Foco visible, consistente y accesible */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid rgba(2, 132, 199, 0.55);
+  outline-offset: 2px;
+}
+html[data-theme="dark"] button:focus-visible,
+html[data-theme="dark"] a:focus-visible,
+html[data-theme="dark"] [role="button"]:focus-visible {
+  outline-color: rgba(56, 189, 248, 0.7);
+}
+
+/* Acción principal (fondo brand) — superficie glass sutil: translúcido,
+   blur moderado, borde interno fino y sombra suave. Sin cambio de tamaño
+   (el borde se simula con un anillo interior, no con border ni padding). */
+button[class~="bg-primary"],
+a[class~="bg-primary"] {
+  background-color: rgba(2, 132, 199, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 1px 2px rgba(2, 132, 199, 0.25), 0 6px 14px -6px rgba(2, 132, 199, 0.35);
+  transition: box-shadow 0.18s ease, transform 0.12s ease, background-color 0.18s ease,
+              border-color 0.18s ease, color 0.18s ease;
+  will-change: transform;
+}
+button[class~="bg-primary"]:hover:not(:disabled),
+a[class~="bg-primary"]:hover {
+  background-color: rgba(14, 165, 233, 0.92);
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 2px 4px rgba(2, 132, 199, 0.3), 0 10px 20px -8px rgba(2, 132, 199, 0.45);
+}
+button[class~="bg-primary"]:active:not(:disabled),
+a[class~="bg-primary"]:active {
+  background-color: rgba(2, 132, 199, 0.92);
+  transform: translateY(0) scale(0.98);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 1px 2px rgba(2, 132, 199, 0.3);
+}
+
+/* Acción destructiva (Cerrar sesión / errores) — mismo glass, color original */
+button[class~="bg-error"],
+a[class~="bg-error"] {
+  background-color: rgba(220, 38, 38, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    0 1px 2px rgba(220, 38, 38, 0.28), 0 6px 14px -6px rgba(220, 38, 38, 0.32);
+  transition: box-shadow 0.18s ease, transform 0.12s ease, background-color 0.18s ease,
+              border-color 0.18s ease, color 0.18s ease;
+  will-change: transform;
+}
+button[class~="bg-error"]:hover:not(:disabled),
+a[class~="bg-error"]:hover {
+  background-color: rgba(185, 28, 28, 0.92);
+  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25),
+    0 2px 4px rgba(220, 38, 38, 0.35), 0 10px 18px -8px rgba(220, 38, 38, 0.4);
+}
+button[class~="bg-error"]:active:not(:disabled),
+a[class~="bg-error"]:active {
+  background-color: rgba(220, 38, 38, 0.92);
+  transform: translateY(0) scale(0.98);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 1px 2px rgba(220, 38, 38, 0.3);
+}
+
+/* Contorno primario (login / acciones secundarias con borde brand) */
+button[class~="border-primary"],
+button[class~="border-primary/25"],
+a[class~="border-primary"][class~="rounded-xl"],
+a[class~="border-primary/25"][class~="rounded-xl"] {
+  background-color: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: box-shadow 0.18s ease, transform 0.12s ease, background-color 0.18s ease,
+              border-color 0.18s ease, color 0.18s ease;
+  will-change: transform;
+}
+button[class~="border-primary"]:hover:not(:disabled),
+button[class~="border-primary/25"]:hover:not(:disabled),
+a[class~="border-primary"][class~="rounded-xl"]:hover,
+a[class~="border-primary/25"][class~="rounded-xl"]:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08), 0 8px 18px -8px rgba(2, 132, 199, 0.28);
+}
+button[class~="border-primary"]:active:not(:disabled),
+button[class~="border-primary/25"]:active:not(:disabled),
+a[class~="border-primary"][class~="rounded-xl"]:active,
+a[class~="border-primary/25"][class~="rounded-xl"]:active {
+  background-color: rgba(255, 255, 255, 0.28);
+  transform: translateY(0) scale(0.98);
+}
+
+/* Botones ghost / de icono (contorno outline) */
+button[class~="border-outline-variant"],
+a[class~="border-outline-variant"][class~="rounded-lg"] {
+  background-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transition: box-shadow 0.18s ease, transform 0.12s ease, background-color 0.18s ease,
+              border-color 0.18s ease, color 0.18s ease;
+  will-change: transform;
+}
+button[class~="border-outline-variant"]:hover:not(:disabled),
+a[class~="border-outline-variant"][class~="rounded-lg"]:hover {
+  background-color: rgba(255, 255, 255, 0.55);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -6px rgba(15, 23, 42, 0.12);
+}
+button[class~="border-outline-variant"]:active:not(:disabled),
+a[class~="border-outline-variant"][class~="rounded-lg"]:active {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(0) scale(0.96);
+}
+
+/* ---------- Componentes de catálogo / almacén ---------- */
+.almacen-chip {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+.almacen-chip:hover {
+  box-shadow: 0 4px 10px -6px rgba(2, 132, 199, 0.25);
+}
+.almacen-chip:active:not(.active) {
+  transform: translateY(0) scale(0.97);
+}
+
+.cat-tile:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.pager-btn:hover:not(:disabled) {
+  box-shadow: 0 2px 8px -3px rgba(2, 132, 199, 0.35);
+}
+.pager-btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+}
+
+.av-btn:active:not(.active) {
+  transform: scale(0.96);
+}
+
+.gest-btn:active {
+  transform: translateY(0) scale(0.94);
+}
+.gest-btn-primary:hover {
+  box-shadow: 0 4px 10px -4px rgba(2, 132, 199, 0.35);
+}
+
+.wa-btn {
+  box-shadow: 0 1px 2px rgba(18, 140, 126, 0.08);
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease,
+              box-shadow 0.18s ease, transform 0.12s ease;
+}
+.wa-btn:hover {
+  box-shadow: 0 4px 12px -6px rgba(37, 211, 102, 0.35);
+}
+.wa-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+.wa-btn:focus-visible {
+  outline-color: rgba(37, 211, 102, 0.7);
+}
+
+.pay-card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease,
+              transform 0.12s ease;
+}
+.pay-card:hover {
+  transform: translateY(-1px);
+}
+.pay-card:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ---------- Superficies claras — vidrio sutil en modo claro ----------
+   Chips, tiles, paginación, opciones de pago y botones de gestión conservan
+   su color original pero sobre superficies ligeramente translúcidas con blur. */
+.almacen-chip,
+.cat-tile,
+.pager-btn,
+.pay-card,
+.gest-btn {
+  background-color: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.almacen-chip:hover,
+.cat-tile:hover,
+.pay-card:hover {
+  background-color: rgba(255, 255, 255, 0.86);
+}
+/* Paginación y gestión: mantienen el azul claro original (#E0F2FE) en hover,
+   solo translúcido para no romper la transparencia del vidrio. */
+.pager-btn:hover:not(:disabled) {
+  background-color: rgba(224, 242, 254, 0.82);
+}
+.gest-btn:not(.gest-btn-primary):hover {
+  background-color: rgba(224, 242, 254, 0.82);
+}
+
+/* ---------- Header / zona superior — hero glass sutil ----------
+   SOLO la barra superior fija (nav) y su menú móvil. Ligeramente
+   transparente con blur moderado, borde inferior fino translúcido y
+   sombra suave. Usa únicamente colores ya existentes (#F1F5F9, #E2E8F0,
+   #0F172A, #0B1220, #2B3A52). No altera el resto de la página. */
+nav[class~="fixed"] {
+  background-color: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom-color: rgba(226, 232, 240, 0.75);
+  box-shadow: 0 1px 2px rgba(2, 6, 23, 0.05), 0 10px 30px -14px rgba(2, 6, 23, 0.14);
+}
+nav[class~="fixed"] #mobileMenu {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* ==========================================================================
    MODO OSCURO — RefriMaster
    ==========================================================================
    Regla: el modo claro NO se toca. Estos estilos SOLO se activan cuando
@@ -744,23 +1014,29 @@ html[data-theme="dark"] .field-label { color: #94A3B8; }
 
 /* ---------- Chips y tiles de categoría (superficies) ---------- */
 html[data-theme="dark"] .almacen-chip {
-  background: #0F172A;
-  border-color: #2B3A52;
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(51, 65, 85, 0.65);
   color: #CBD5E1;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 html[data-theme="dark"] .cat-tile {
-  background: #0F172A;
-  border-color: #2B3A52;
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(51, 65, 85, 0.65);
   color: #E2E8F0;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 html[data-theme="dark"] .cat-tile .tile-sub { color: #94A3B8; }
 
 /* ---------- Paginación ---------- */
 html[data-theme="dark"] .pager { border-top-color: #2B3A52; }
 html[data-theme="dark"] .pager-btn {
-  background: #0F172A;
-  border-color: #2B3A52;
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(51, 65, 85, 0.65);
   color: #CBD5E1;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* ---------- Tarjetas KPI ---------- */
@@ -784,22 +1060,70 @@ html[data-theme="dark"] .av-btn.active {
 
 /* ---------- Opciones de pago ---------- */
 html[data-theme="dark"] .pay-card {
-  background: #0F172A;
+  background: rgba(15, 23, 42, 0.62);
   border-color: #334155;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* ---------- Botones de gestión (staff) ---------- */
 html[data-theme="dark"] .gest-btn {
-  background: #0F172A;
-  border-color: #2B3A52;
+  background: rgba(15, 23, 42, 0.62);
+  border-color: rgba(51, 65, 85, 0.65);
   color: #CBD5E1;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 /* ---------- WhatsApp por producto ---------- */
 html[data-theme="dark"] .wa-btn {
-  background: #0F172A;
+  background: rgba(15, 23, 42, 0.62);
   border-color: rgba(37, 211, 102, 0.5);
   color: #34D399;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ---------- Botones outline e iconos del header — glass oscuro ---------- */
+html[data-theme="dark"] button[class~="border-primary"],
+html[data-theme="dark"] button[class~="border-primary/25"],
+html[data-theme="dark"] a[class~="border-primary"][class~="rounded-xl"],
+html[data-theme="dark"] a[class~="border-primary/25"][class~="rounded-xl"] {
+  background-color: rgba(2, 132, 199, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html[data-theme="dark"] button[class~="border-primary"]:hover:not(:disabled),
+html[data-theme="dark"] button[class~="border-primary/25"]:hover:not(:disabled) {
+  background-color: rgba(2, 132, 199, 0.25);
+}
+html[data-theme="dark"] button[class~="border-outline-variant"],
+html[data-theme="dark"] a[class~="border-outline-variant"][class~="rounded-lg"],
+html[data-theme="dark"] button[class~="rounded-lg"][class~="p-2"] {
+  background-color: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html[data-theme="dark"] button[class~="border-outline-variant"]:hover:not(:disabled),
+html[data-theme="dark"] a[class~="border-outline-variant"][class~="rounded-lg"]:hover,
+html[data-theme="dark"] button[class~="rounded-lg"][class~="p-2"]:hover:not(:disabled) {
+  background-color: rgba(30, 41, 59, 0.65);
+}
+
+/* ---------- Header / zona superior — dark glass hero ----------
+   Misma pauta que en claro pero con los colores oscuros existentes:
+   superficie translúcida #0B1220, borde #2B3A52 y sombra profunda suave. */
+html[data-theme="dark"] nav[class~="fixed"] {
+  background-color: rgba(11, 18, 32, 0.72);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom-color: rgba(43, 58, 82, 0.6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -14px rgba(0, 0, 0, 0.55);
+}
+html[data-theme="dark"] nav[class~="fixed"] #mobileMenu {
+  background-color: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 /* ---------- Glass card / hero (sin filtros ni brillo) ---------- */
