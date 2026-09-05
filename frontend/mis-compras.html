@@ -193,11 +193,88 @@
     </div>
   </main>
 
+  <!-- ============ MODAL PERFIL DEL CLIENTE ============ -->
+  <div id="modal-profile" class="fixed inset-0 z-[100] hidden items-center justify-center p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" data-close="profile"></div>
+    <div class="modal-card relative w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl" style="max-height:92vh">
+      <div class="relative max-h-[92vh] overflow-y-auto p-8 sm:p-10">
+        <button data-close="profile" class="absolute right-4 top-4 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-surface-variant" aria-label="Cerrar">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <div class="flex items-center gap-3">
+          <span class="flex h-11 w-11 items-center justify-center rounded-full bg-primary-container text-primary ring-2 ring-primary/30 overflow-hidden" id="profAvatarWrap">
+            <img id="profAvatar" class="h-full w-full object-cover hidden" alt="Foto de perfil">
+            <span id="profAvatarLetter" class="material-symbols-outlined">person</span>
+          </span>
+          <div class="min-w-0">
+            <h3 class="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">Mi perfil</h3>
+            <p id="profUserInfo" class="truncate font-body-sm text-on-surface-variant"></p>
+          </div>
+        </div>
+
+        <p id="profMsg" class="mt-5 hidden rounded-lg px-3 py-2 text-sm"></p>
+
+        <!-- Acceso al historial de compras del cliente -->
+        <a id="misComprasLink" href="/mis-compras/" class="mt-5 flex items-center justify-between rounded-xl border border-outline-variant bg-surface-container px-4 py-3 transition-colors hover:bg-surface-container-high">
+          <span class="flex items-center gap-3">
+            <span class="material-symbols-outlined text-primary">receipt_long</span>
+            <span class="font-label-md font-bold text-on-surface">Mis compras</span>
+            <span class="hidden font-body-sm text-on-surface-variant sm:inline">Consulta tu historial de pedidos</span>
+          </span>
+          <span class="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+        </a>
+
+        <!-- Datos personales -->
+        <h4 class="mt-6 font-label-md font-bold text-on-surface-variant">DATOS PERSONALES</h4>
+        <form id="profNameForm" class="mt-3 space-y-4" novalidate>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="field-label" for="profFirst">Nombre</label>
+              <input id="profFirst" class="input" type="text">
+            </div>
+            <div>
+              <label class="field-label" for="profLast">Apellido</label>
+              <input id="profLast" class="input" type="text">
+            </div>
+          </div>
+          <button id="profNameBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Guardar nombre</button>
+        </form>
+
+        <!-- Foto de perfil -->
+        <h4 class="mt-8 font-label-md font-bold text-on-surface-variant">FOTO DE PERFIL</h4>
+        <form id="profPhotoForm" class="mt-3 space-y-3" novalidate>
+          <input id="profPhotoInput" type="file" accept="image/jpeg,image/png,image/gif,image/webp,image/avif" class="block w-full text-sm text-on-surface-variant file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:font-label-md file:text-white">
+          <button id="profPhotoBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Subir foto</button>
+        </form>
+
+        <!-- Cambio de contraseña -->
+        <h4 class="mt-8 font-label-md font-bold text-on-surface-variant">CAMBIO DE CONTRASEÑA</h4>
+        <form id="profPassForm" class="mt-3 space-y-4" novalidate>
+          <div>
+            <label class="field-label" for="profPassActual">Contraseña actual</label>
+            <input id="profPassActual" class="input" type="password" autocomplete="current-password">
+          </div>
+          <div>
+            <label class="field-label" for="profPassNueva">Nueva contraseña</label>
+            <input id="profPassNueva" class="input" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password">
+            <p class="mt-1.5 text-xs text-slate-500">Mínimo 8 caracteres. Evita contraseñas solo numéricas o muy comunes.</p>
+          </div>
+          <div>
+            <label class="field-label" for="profPassConf">Confirmar nueva contraseña</label>
+            <input id="profPassConf" class="input" type="password" placeholder="Repite la contraseña" autocomplete="new-password">
+          </div>
+          <button id="profPassBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Cambiar contraseña</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <div id="toast" class="toast" role="status"></div>
 
   <script src="/js/connection.js"></script>
   <script src="/js/whatsapp.js"></script>
   <script src="/js/cart.js"></script>
+  <script src="/js/session.js"></script>
   <script src="/js/main.js"></script>
   <script src="/js/mis-compras.js"></script>
 </body>

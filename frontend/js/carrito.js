@@ -180,26 +180,6 @@
     return u && STAFF_ROLES.indexOf(u.role) >= 0;
   }
 
-  /* ---------- Sesión (opcional) ---------- */
-  function applySession(user) {
-    var area = $('#sessionArea');
-    if (!user) {
-      area.innerHTML = '<a href="/" class="inline-flex items-center gap-2 rounded-xl border-2 border-primary/25 px-4 py-2 font-label-md font-bold text-primary transition-all hover:border-primary hover:bg-primary-container active:scale-95"><span class="material-symbols-outlined text-base">login</span>Iniciar Sesión</a>';
-    } else {
-      var name = user.full_name || user.username || 'Usuario';
-      var panelBtn = (STAFF_ROLES.indexOf(user.role) >= 0)
-        ? '<a href="/admin-dashboard/" class="rounded-lg bg-primary px-4 py-2 font-label-md text-white transition-colors hover:bg-primary-hover">Panel</a>'
-        : '';
-      area.innerHTML = '<span class="hidden font-body-md font-medium text-on-surface-variant md:inline">Hola, ' + esc(name) + '</span>' + panelBtn;
-    }
-    area.classList.remove('hidden');
-    area.classList.add('flex');
-  }
-  try {
-    var raw = localStorage.getItem('refri_user');
-    if (raw) applySession(JSON.parse(raw));
-    else applySession(null);
-  } catch (e) { applySession(null); }
 
   /* ---------- Menú móvil + año ---------- */
   var menuBtn = $('#menuBtn');
