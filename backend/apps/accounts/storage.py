@@ -35,8 +35,36 @@ logger = logging.getLogger(__name__)
 
 BUCKET = 'fotos-perfil'
 DEFAULT_TIMEOUT = 15
+# Columna accounts_user.photo (ImageField sin max_length propio): varchar(100).
+COLUMN_MAX_LENGTH = 100
 _SUPABASE_URL_ENV = 'SUPABASE_URL'
 _SUPABASE_SECRET_ENV = 'SUPABASE_SECRET_KEY'
+
+
+def _adjust_name_length(name, max_length):
+    """Ajusta un nombre de objeto para que no supere ``max_length``.
+
+    Conserva el directorio (``fotos_perfil/``), el uuid único al inicio del
+    nombre base y la extensión original (``.jpg``, ``.jpeg``, ``.png``, etc.).
+    Solo se recorta el nombre base cuando es estrictamente necesario.
+    """
+    name = str(name).replace('\\', '/')
+    if len(name) <= max_length:
+        return name
+    dirname, _, filename = name.rpartition('/')
+    stem, dot, ext = filename.rpartition('.')
+    if not dot:
+        stem = filename
+        dot, ext = '', ''
+    prefix = ''
+    rest = stem
+    if len(stem) > 32 and stem[32] == '_':
+        prefix = stem[:33]
+        rest = stem[33:]
+    budget = max_length - len(dirname) - 1 - len(prefix) - len(dot) - len(ext)
+    if budget < 0:
+        budget = 0
+    return (dirname + '/' if dirname else '') + prefix + rest[:budget] + dot + ext
 
 
 def _auth_headers(secret):
@@ -195,17 +223,16 @@ class SupabaseStorage(Storage):
         return self._endpoint('public', name)
 
     def get_available_name(self, name, max_length=None):
+        # La columna accounts_user.photo es varchar(100) (ImageField sin
+        # max_length propio): se recorta solo el nombre base hasta caber,
+        # conservando el directorio, el uuid (único) y la extensión.
+        limite = max_length if max_length is not None else COLUMN_MAX_LENGTH
+        name = _adjust_name_length(self._norm(name), limite)
         if self._local_fs is not None:
             return self._local_fs.get_available_name(name, max_length=max_length)
-        # El nombre ya incluye uuid (único) y la subida usa x-upsert; devolverlo
-        # tal cual evita una llamada HEAD por cada subida.
-        if max_length is not None and len(self._norm(name)) > max_length:
-            raise SupabaseStorageError(
-                'El nombre del archivo excede el máximo permitido ({}).'.format(
-                    max_length
-                )
-            )
-        return self._norm(name)
+        # El nombre ya incluye uuid (único) y la subida usa x-upsert: devolverlo
+        # tal cual evita llamadas HEAD adicionales por cada subida.
+        return name
 
     # ------------------------------------------------------------------ #
     # Internos
