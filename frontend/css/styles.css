@@ -944,16 +944,19 @@ a[class~="border-outline-variant"][class~="rounded-lg"]:active {
    sombra suave. Usa únicamente colores ya existentes (#F1F5F9, #E2E8F0,
    #0F172A, #0B1220, #2B3A52). No altera el resto de la página. */
 nav[class~="fixed"] {
-  background-color: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-bottom-color: rgba(226, 232, 240, 0.75);
-  box-shadow: 0 1px 2px rgba(2, 6, 23, 0.05), 0 10px 30px -14px rgba(2, 6, 23, 0.14);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.82) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom-color: rgba(2, 132, 199, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85), 0 1px 2px rgba(2, 6, 23, 0.05), 0 12px 32px -16px rgba(2, 6, 23, 0.2);
+}
+nav[class~="fixed"][class~="shadow-md"] {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(2, 6, 23, 0.08), 0 16px 40px -16px rgba(2, 6, 23, 0.26);
 }
 nav[class~="fixed"] #mobileMenu {
-  background-color: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background-color: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 /* ---------- Enlaces de navegación del header — texto limpio ----------
@@ -1152,16 +1155,19 @@ html[data-theme="dark"] button[class~="rounded-lg"][class~="p-2"]:hover:not(:dis
    Misma pauta que en claro pero con los colores oscuros existentes:
    superficie translúcida #0B1220, borde #2B3A52 y sombra profunda suave. */
 html[data-theme="dark"] nav[class~="fixed"] {
-  background-color: rgba(11, 18, 32, 0.72);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-bottom-color: rgba(43, 58, 82, 0.6);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 28px -14px rgba(0, 0, 0, 0.55);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.94) 0%, rgba(11, 18, 32, 0.86) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom-color: rgba(2, 132, 199, 0.22);
+  box-shadow: inset 0 1px 0 rgba(43, 58, 82, 0.5), 0 1px 2px rgba(0, 0, 0, 0.35), 0 14px 34px -16px rgba(0, 0, 0, 0.6);
+}
+html[data-theme="dark"] nav[class~="fixed"][class~="shadow-md"] {
+  box-shadow: inset 0 1px 0 rgba(43, 58, 82, 0.6), 0 1px 2px rgba(0, 0, 0, 0.4), 0 18px 44px -18px rgba(0, 0, 0, 0.65);
 }
 html[data-theme="dark"] nav[class~="fixed"] #mobileMenu {
-  background-color: rgba(15, 23, 42, 0.95);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background-color: rgba(15, 23, 42, 0.97);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 /* ---------- Enlaces de navegación del header — dark: solo hover tenue ----------
@@ -1186,3 +1192,142 @@ html[data-theme="dark"] ::-webkit-scrollbar-thumb {
   border-color: #0B1220;
 }
 html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* ==========================================================================
+   EFECTOS VISUALES PREMIUM — RefriMaster
+   Sutiles y coherentes con la identidad existente: solo se usan colores que
+   YA existen (primary #0284C7, secondary #06B6D4, #0F172A, blancos).
+   No cambia textos, imágenes, layout ni funcionalidades.
+   ========================================================================== */
+
+/* ---------- 1. Entrada suave del contenido del Hero ---------- */
+@keyframes rm-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+#inicio .max-w-2xl > *,
+.hero-almacen .max-w-3xl > * {
+  opacity: 0;
+  animation: rm-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+#inicio .max-w-2xl > *:nth-child(1) { animation-delay: 0.05s; }
+#inicio .max-w-2xl > *:nth-child(2) { animation-delay: 0.18s; }
+#inicio .max-w-2xl > *:nth-child(3) { animation-delay: 0.32s; }
+#inicio .max-w-2xl > *:nth-child(4) { animation-delay: 0.46s; }
+.hero-almacen .max-w-3xl > * { animation-delay: 0.15s; }
+.hero-almacen .max-w-3xl > *:nth-child(2) { animation-delay: 0.28s; }
+.hero-almacen .max-w-3xl > *:nth-child(3) { animation-delay: 0.42s; }
+
+/* ---------- 2. Luz ambiental azul muy sutil en los Heroes ---------- */
+.rb-hero-glow {
+  background:
+    radial-gradient(60% 55% at 16% 40%, rgba(2, 132, 199, 0.2) 0%, rgba(2, 132, 199, 0) 60%),
+    radial-gradient(55% 50% at 88% 28%, rgba(6, 182, 212, 0.13) 0%, rgba(6, 182, 212, 0) 62%),
+    radial-gradient(45% 45% at 62% 100%, rgba(2, 132, 199, 0.1) 0%, rgba(2, 132, 199, 0) 65%);
+  opacity: 0.85;
+  animation: rm-glow 16s ease-in-out infinite;
+}
+@keyframes rm-glow {
+  0%, 100% { opacity: 0.85; transform: translateX(0) scale(1); }
+  50%      { opacity: 1;    transform: translateX(14px) scale(1.02); }
+}
+
+/* ---------- 3. Botones primarios — microinteracciones ---------- */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  button[class~="rounded-xl"][class~="bg-primary"]:not(:disabled),
+  a[class~="rounded-xl"][class~="bg-primary"] {
+    transition: background-color 0.2s ease, box-shadow 0.25s ease, transform 0.15s ease;
+  }
+  button[class~="rounded-xl"][class~="bg-primary"]:hover:not(:disabled),
+  a[class~="rounded-xl"][class~="bg-primary"]:hover {
+    transform: translateY(-1px) scale(1.01);
+    box-shadow: 0 12px 26px -12px rgba(2, 132, 199, 0.55);
+  }
+  button[class~="rounded-xl"][class~="bg-primary"]:active:not(:disabled),
+  a[class~="rounded-xl"][class~="bg-primary"]:active {
+    transform: scale(0.99);
+    box-shadow: 0 6px 16px -10px rgba(2, 132, 199, 0.45);
+  }
+}
+
+/* ---------- 4. Tarjetas de producto — bordes con tinte azul al hover ---------- */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  article[data-producto-link]:hover,
+  article.av-card:hover {
+    border-color: rgba(2, 132, 199, 0.35);
+  }
+}
+
+/* ---------- 5. Aparición de secciones al hacer scroll ---------- */
+.rm-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.rm-reveal.rm-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---------- 6. Móvil: efectos más ligeros (rendimiento) ---------- */
+@media (max-width: 767px) {
+  .rb-hero-glow { animation: none; opacity: 0.9; }
+  .rm-reveal { transform: translateY(18px); }
+}
+
+/* ---------- 7. Accesibilidad: respeta prefers-reduced-motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001s !important;
+  }
+  #inicio .max-w-2xl > *,
+  .hero-almacen .max-w-3xl > * {
+    opacity: 1 !important;
+    animation: none !important;
+    transform: none !important;
+  }
+  .rb-hero-glow { animation: none !important; }
+  .rm-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  article[data-producto-link],
+  article.av-card { transform: none !important; }
+  /* El logo de RefriMaster conserva su giro ORIGINAL (360°, continuo, 5s),
+     tal como funcionaba antes de la regla de accesibilidad. */
+  [class*="rounded-xl"][class*="from-primary"][class*="to-secondary"] > .material-symbols-outlined,
+  [class*="rounded-2xl"][class*="from-primary"][class*="to-secondary"] > .material-symbols-outlined,
+  [class*="rounded-xl"][class*="bg-white/15"][class*="ring-white/25"] > .material-symbols-outlined {
+    animation: logo-spin 5s linear infinite !important;
+  }
+}
+
+/* ==========================================================================
+   BOTÓN "CERRAR SESIÓN" — lenguaje visual del badge primary-container
+   Mismo tratamiento que el badge REFRIGERACIÓN 4.0: bg-primary-container,
+   text-on-primary-container y ring-1 ring-inset ring-primary/20, con el
+   mismo tamaño, posición y clases responsive actuales. Sin color rojo.
+   No cambia texto, icono, funcionalidad ni otros botones (el logout del
+   panel admin queda intacto).
+   ========================================================================== */
+#sessionArea #logoutBtn {
+  background-color: #E0F2FE; /* bg-primary-container */
+  color: #075985;            /* on-primary-container */
+  border-color: transparent;
+  font-weight: 700;          /* font-bold del badge */
+  border-radius: 9999px;     /* rounded-full del badge */
+  box-shadow: inset 0 0 0 1px rgba(2, 132, 199, 0.2); /* ring-1 ring-inset ring-primary/20 */
+  transition: background-color 0.2s ease, box-shadow 0.22s ease, color 0.2s ease,
+              transform 0.15s ease;
+}
+@media (hover: hover) {
+  #sessionArea #logoutBtn:hover {
+    background-color: #BAE6FD;
+    box-shadow: inset 0 0 0 1px rgba(2, 132, 199, 0.32),
+                0 6px 14px -8px rgba(2, 132, 199, 0.38);
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  #sessionArea #logoutBtn:hover { transform: translateY(-1px); }
+  #sessionArea #logoutBtn:active { transform: translateY(0) scale(0.98); }
+}

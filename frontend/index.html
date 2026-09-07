@@ -164,7 +164,11 @@
     <!-- ============ HERO ============ -->
     <section id="inicio" class="relative overflow-hidden bg-surface-container">
       <!-- Fondo: imagen del Hero natural (hero, bg-cover sin filtros/efectos) -->
-      <div class="pointer-events-none absolute inset-0 bg-cover bg-[position:30%_50%] md:bg-center" style="background-image:url('/assets/img/equipos/hero.png')" role="img" aria-label="Equipos de refrigeración RefriMaster"></div>
+      <div class="pointer-events-none absolute inset-0 bg-cover bg-[position:30%_50%] md:bg-center" style="background-image:url('/assets/img/equipos/hero8.png')" role="img" aria-label="Equipos de refrigeración RefriMaster"></div>
+      <!-- Overlay degradado: más oscuro a la izquierda (texto), transparente hacia la derecha -->
+      <div aria-hidden="true" class="pointer-events-none absolute inset-0" style="background:linear-gradient(90deg, rgba(2,6,23,0.82) 0%, rgba(2,6,23,0.40) 35%, rgba(2,6,23,0.10) 60%, rgba(2,6,23,0.02) 75%, rgba(2,6,23,0) 100%)"></div>
+      <!-- Luz ambiental azul muy sutil -->
+      <div aria-hidden="true" class="rb-hero-glow pointer-events-none absolute inset-0"></div>
       <div class="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-container-max flex-col justify-center px-lg py-16 md:py-24">
         <div class="max-w-2xl space-y-6">
           <span class="inline-flex w-fit items-center gap-2 rounded-full bg-primary-container px-4 py-1.5 font-label-md font-bold text-on-primary-container ring-1 ring-inset ring-primary/20">
@@ -187,7 +191,7 @@
     </section>
 
     <!-- ============ CATÁLOGO DE EQUIPAMIENTO ============ -->
-    <section id="catalogo" class="bg-white py-20">
+    <section id="catalogo" class="rm-reveal bg-white py-20">
       <div class="mx-auto max-w-container-max px-lg">
         <div class="mb-12 text-center">
           <div>
@@ -281,7 +285,7 @@
     </section>
 
     <!-- ============ SERVICIOS ============ -->
-    <section id="servicios" class="bg-surface-container py-20">
+    <section id="servicios" class="rm-reveal bg-surface-container py-20">
       <div class="mx-auto max-w-container-max px-lg">
         <div class="mb-12 text-center">
           <span class="font-label-md font-bold text-primary">SERVICIOS</span>
@@ -322,7 +326,7 @@
     </section>
 
     <!-- ============ CALCULADORA DE BTU/H ============ -->
-    <section id="calculadora" class="bg-white py-20">
+    <section id="calculadora" class="rm-reveal bg-white py-20">
       <div class="mx-auto max-w-container-max px-lg">
         <div class="mb-12 text-center">
           <span class="font-label-md font-bold text-primary">CALCULADORA DE BTU/H</span>
@@ -432,7 +436,7 @@
     </section>
 
     <!-- ============ PROYECTOS ============ -->
-    <section id="proyectos" class="bg-inverse-surface py-20 text-on-inverse-surface">
+    <section id="proyectos" class="rm-reveal bg-inverse-surface py-20 text-on-inverse-surface">
       <div class="mx-auto max-w-container-max px-lg">
         <div class="mb-12 text-center">
           <span class="font-label-md font-bold text-secondary-container">PROYECTOS</span>
@@ -473,7 +477,7 @@
     </section>
 
     <!-- ============ TESTIMONIOS ============ -->
-    <section id="testimonios" class="bg-white py-20">
+    <section id="testimonios" class="rm-reveal bg-white py-20">
       <div class="mx-auto max-w-container-max px-lg">
         <div class="mb-12 text-center">
           <span class="font-label-md font-bold text-primary">TESTIMONIOS</span>
@@ -519,7 +523,7 @@
     </section>
 
     <!-- ============ CONTACTO ============ -->
-    <section id="contacto" class="relative overflow-hidden bg-surface-container-low py-20">
+    <section id="contacto" class="rm-reveal relative overflow-hidden bg-surface-container-low py-20">
       <div class="pointer-events-none absolute inset-0">
         <div class="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-secondary-container opacity-60 blur-3xl"></div>
         <div class="absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-primary-container opacity-70 blur-3xl"></div>

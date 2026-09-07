@@ -610,4 +610,22 @@
   if (new URLSearchParams(location.search).get('open_login') === '1') {
     openModal('login');
   }
+
+  /* ---------- Aparición de secciones al hacer scroll (sutil) ---------- */
+  var revealEls = $$('.rm-reveal');
+  if (revealEls.length) {
+    if ('IntersectionObserver' in window) {
+      var rmObs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('rm-in');
+            rmObs.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+      revealEls.forEach(function (el) { rmObs.observe(el); });
+    } else {
+      revealEls.forEach(function (el) { el.classList.add('rm-in'); });
+    }
+  }
 })();
