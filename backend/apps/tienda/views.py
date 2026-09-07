@@ -93,7 +93,7 @@ class TiendaConfigView(APIView):
     permission_classes = []
 
     def get(self, request):
-        return Response({
+        data = {
             'moneda': settings.TIENDA_MONEDA,
             'costo_envio': settings.COSTO_ENVIO,
             'envio_gratis_desde': settings.ENVIO_GRATIS_MINIMO,
@@ -103,8 +103,12 @@ class TiendaConfigView(APIView):
                 {'value': 'paypal', 'label': 'PayPal'},
                 {'value': 'billetera', 'label': 'Billetera / app'},
             ],
-            'tarjetas_prueba': payments.CARD_APROBADA,
-        })
+        }
+        # La tarjeta de prueba solo tiene sentido en modo sandbox; en producción
+        # no debe anunciarse ningún número de prueba a los clientes.
+        if settings.PAYMENT_MODE == 'sandbox':
+            data['tarjetas_prueba'] = payments.CARD_APROBADA
+        return Response(data)
 
 
 class CrearOrdenTarjetaView(APIView):

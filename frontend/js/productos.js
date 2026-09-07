@@ -89,6 +89,10 @@
       if (await tryRefresh()) {
         headers['Authorization'] = 'Bearer ' + localStorage.getItem('refri_access');
         res = await fetch(API_BASE + path, Object.assign({}, options, { headers: headers }));
+      } else {
+        var publicHeaders = Object.assign({}, headers);
+        delete publicHeaders['Authorization'];
+        res = await fetch(API_BASE + path, Object.assign({}, options, { headers: publicHeaders }));
       }
     }
 
@@ -197,6 +201,7 @@
    * Vitrina de productos
    * ------------------------------------------------------------------ */
   var UMBRAL_STOCK_BAJO = 5;
+  var STAFF_ROLES = ['administrador', 'supervisor', 'tecnico', 'almacen'];
   var ROLES_STOCK = ['administrador', 'almacen'];
   var ROLES_GESTION = ['administrador', 'supervisor', 'almacen'];
   var currentUser = null;

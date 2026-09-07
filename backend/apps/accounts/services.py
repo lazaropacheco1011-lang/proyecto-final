@@ -110,20 +110,25 @@ def enviar_correo_bienvenida(user):
     if not user or not user.email:
         return False
     nombre = user.get_full_name() or user.username
-    send_mail(
-        subject='Bienvenido a RefriMaster',
-        message=(
-            f'Hola {nombre}:\n\n'
-            'Tu cuenta en RefriMaster fue creada correctamente. '
-            'Ya puedes iniciar sesión con tu usuario y contraseña para '
-            'comprar en la vitrina y consultar tus pedidos.\n\n'
-            'Si tienes alguna duda, no dudes en contactarnos.\n\n'
-            'Saludos,\nEquipo RefriMaster'
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[user.email],
-        fail_silently=True,
-    )
+    try:
+        send_mail(
+            subject='Bienvenido a RefriMaster',
+            message=(
+                f'Hola {nombre}:\n\n'
+                'Tu cuenta en RefriMaster fue creada correctamente. '
+                'Ya puedes iniciar sesión con tu usuario y contraseña para '
+                'comprar en la vitrina y consultar tus pedidos.\n\n'
+                'Si tienes alguna duda, no dudes en contactarnos.\n\n'
+                'Saludos,\nEquipo RefriMaster'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+    except (smtplib.SMTPException, ConnectionError, TimeoutError, OSError) as exc:
+        # El registro de la cuenta ya se completó: el correo es informativo y
+        # no debe romper el flujo, pero sí debe quedar registrado en el log.
+        logger.error('No se pudo enviar el correo de bienvenida a %s: %s', user.email, exc)
     return True
 
 

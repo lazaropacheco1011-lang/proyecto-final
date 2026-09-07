@@ -94,9 +94,22 @@ class Orden(models.Model):
         return pago.get_estado_display() if pago else '—'
 
     def save(self, *args, **kwargs):
-        if not self.numero:
-            self.numero = self._generar_numero()
-        super().save(*args, **kwargs)
+        if self.numero:
+            super().save(*args, **kwargs)
+            return
+        # El número se deriva de Max(id)+1, por lo que dos peticiones
+        # simultáneas podrían calcular el mismo ORD-XXXX. Se reintenta dentro
+        # de una transacción al recibir una colisión de unicidad.
+        from django.db import IntegrityError, transaction
+        for _ in range(10):
+            try:
+                with transaction.atomic():
+                    self.numero = self._generar_numero()
+                    super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                self.numero = ''
+        raise RuntimeError('No se pudo generar un número de orden único.')
 
     @staticmethod
     def _generar_numero():

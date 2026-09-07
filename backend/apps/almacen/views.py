@@ -16,16 +16,31 @@ from apps.core.permissions import ADMIN, ALMACEN, has_role
 from apps.core.services import delete_or_conflict, register_audit, reject_if
 
 
-# Extensiones por tipo de contenido para las imágenes subidas desde el panel.
+# Extensiones por tipo de imagen REAL detectado por firma binaria: no se
+# confía en el Content-Type declarado por el cliente (es manipulable).
 IMAGEN_CONTENT_TYPES = {
     'image/jpeg': '.jpg',
     'image/png': '.png',
     'image/gif': '.gif',
     'image/webp': '.webp',
     'image/avif': '.avif',
-    'image/svg+xml': '.svg',
 }
 MAX_IMAGEN_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+def _detectar_tipo_imagen(head):
+    """Detecta el tipo de imagen real por magic bytes. Retorna el mime o None."""
+    if head[:8] == b'\x89PNG\r\n\x1a\n':
+        return 'image/png'
+    if head[:3] == b'\xff\xd8\xff':
+        return 'image/jpeg'
+    if head[:6] in (b'GIF87a', b'GIF89a'):
+        return 'image/gif'
+    if head[:4] == b'RIFF' and head[8:12] == b'WEBP':
+        return 'image/webp'
+    if head[4:8] == b'ftyp' and b'avif' in head[:12]:
+        return 'image/avif'
+    return None
 
 
 class AlmacenPermission(BasePermission):
@@ -55,8 +70,19 @@ class ProductoImagenUploadView(APIView):
             return Response(
                 {'error': 'No se recibió ningún archivo de imagen.'}, status=400,
             )
-        content_type = (archivo.content_type or '').lower()
-        if content_type not in IMAGEN_CONTENT_TYPES:
+        head = archivo.read(16)
+        archivo.seek(0)
+        # Los SVG se rechazan: pueden contener <script> y se servirían en el
+        # mismo origen (/media/), permitiendo XSS almacenado. Los SVG del
+        # proyecto viven en /assets/ y se referencian por ruta en el panel.
+        if b'<svg' in head.lower() or head.lstrip(b'\xef\xbb\xbf')[:4].lower() in (b'<svg', b'<?xm'):
+            return Response(
+                {'error': 'No se permiten archivos SVG por seguridad. '
+                          'Usa PNG/JPG/WebP o indica una ruta de /assets.'},
+                status=400,
+            )
+        mime = _detectar_tipo_imagen(head)
+        if mime is None:
             return Response(
                 {'error': 'El archivo no es una imagen válida.'}, status=400,
             )
@@ -64,9 +90,20 @@ class ProductoImagenUploadView(APIView):
             return Response(
                 {'error': 'La imagen supera el tamaño máximo de 5 MB.'}, status=400,
             )
+        # Verificación con Pillow de que el archivo es una imagen decodificable.
+        # AVIF se valida solo por firma (depende de libavif en Pillow).
+        if mime != 'image/avif':
+            try:
+                from PIL import Image
+                Image.open(archivo).verify()
+                archivo.seek(0)
+            except Exception:
+                return Response(
+                    {'error': 'El archivo no es una imagen válida.'}, status=400,
+                )
 
         nombre = get_valid_filename(archivo.name or 'imagen')
-        ext = IMAGEN_CONTENT_TYPES[content_type]
+        ext = IMAGEN_CONTENT_TYPES[mime]
         if not nombre.lower().endswith(ext):
             nombre = nombre + ext
 

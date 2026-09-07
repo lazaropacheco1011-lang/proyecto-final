@@ -87,9 +87,21 @@ class OrdenServicio(models.Model):
         return f'{self.numero} - {self.cliente} ({self.get_estado_display()})'
 
     def save(self, *args, **kwargs):
-        if not self.numero:
-            self.numero = self._generar_numero()
-        super().save(*args, **kwargs)
+        if self.numero:
+            super().save(*args, **kwargs)
+            return
+        # Reintento ante colisiones de unicidad del número generado por
+        # Max(id)+1 cuando dos peticiones se crean en paralelo.
+        from django.db import IntegrityError, transaction
+        for _ in range(10):
+            try:
+                with transaction.atomic():
+                    self.numero = self._generar_numero()
+                    super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                self.numero = ''
+        raise RuntimeError('No se pudo generar un número de orden único.')
 
     @staticmethod
     def _generar_numero():
@@ -221,11 +233,27 @@ class VisitaTecnica(models.Model):
         return f'{self.numero} - {self.cliente} ({self.get_estado_display()})'
 
     def save(self, *args, **kwargs):
-        if not self.numero:
-            from django.db.models import Max
-            ultimo = VisitaTecnica.objects.aggregate(m=Max('id'))['m'] or 0
-            self.numero = f'VT-{ultimo + 1:04d}'
-        super().save(*args, **kwargs)
+        if self.numero:
+            super().save(*args, **kwargs)
+            return
+        # Reintento ante colisiones de unicidad del número generado por
+        # Max(id)+1 cuando dos visitas se crean en paralelo.
+        from django.db import IntegrityError, transaction
+        for _ in range(10):
+            try:
+                with transaction.atomic():
+                    self.numero = self._generar_numero()
+                    super().save(*args, **kwargs)
+                return
+            except IntegrityError:
+                self.numero = ''
+        raise RuntimeError('No se pudo generar un número de visita único.')
+
+    @staticmethod
+    def _generar_numero():
+        from django.db.models import Max
+        ultimo = VisitaTecnica.objects.aggregate(m=Max('id'))['m'] or 0
+        return f'VT-{ultimo + 1:04d}'
 
     @property
     def tecnico_nombre(self):

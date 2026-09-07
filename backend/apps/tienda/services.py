@@ -1,4 +1,5 @@
 """Servicios de la tienda: creación de órdenes, cálculo de totales y pagos."""
+import logging
 from decimal import Decimal
 
 from django.conf import settings
@@ -10,6 +11,8 @@ from apps.almacen.models import Producto
 from apps.clientes.models import Cliente
 from apps.core.services import register_audit
 from apps.tienda.models import Orden, OrdenEstadoLog, OrdenItem, PagoTienda
+
+logger = logging.getLogger(__name__)
 
 
 def calcular_envio(subtotal):
@@ -153,28 +156,33 @@ def enviar_correo_confirmacion_orden(orden):
     detalle = '\n'.join(lineas) if lineas else '(Sin productos detallados)'
     nombre = orden.nombre_cliente or 'Cliente'
 
-    send_mail(
-        subject=f'Confirmación de tu compra — Orden {orden.numero}',
-        message=(
-            f'Hola {nombre}:\n\n'
-            f'Gracias por tu compra. Tu orden fue creada correctamente.\n\n'
-            f'---\n'
-            f'Número de orden: {orden.numero}\n'
-            f'Fecha de la compra: {orden.created_at:%d/%m/%Y %H:%M}\n'
-            f'Estado de la orden: {orden.get_estado_display()}\n'
-            f'---\n\n'
-            f'Productos: \n{detalle}\n\n'
-            f'Subtotal: ${Decimal(orden.subtotal):,.2f}\n'
-            f'Envío: ${Decimal(orden.envio):,.2f}\n'
-            f'Total de la compra: ${Decimal(orden.total):,.2f} ({orden.moneda})\n\n'
-            'Puedes consultar el detalle completo de tus pedidos desde tu '
-            'perfil en RefriMaster. Si tienes dudas, contáctanos.\n\n'
-            'Saludos,\nEquipo RefriMaster'
-        ),
-        from_email=settings.DEFAULT_FROM_EMAIL,
-        recipient_list=[orden.email],
-        fail_silently=True,
-    )
+    try:
+        send_mail(
+            subject=f'Confirmación de tu compra — Orden {orden.numero}',
+            message=(
+                f'Hola {nombre}:\n\n'
+                f'Gracias por tu compra. Tu orden fue creada correctamente.\n\n'
+                f'---\n'
+                f'Número de orden: {orden.numero}\n'
+                f'Fecha de la compra: {orden.created_at:%d/%m/%Y %H:%M}\n'
+                f'Estado de la orden: {orden.get_estado_display()}\n'
+                f'---\n\n'
+                f'Productos: \n{detalle}\n\n'
+                f'Subtotal: ${Decimal(orden.subtotal):,.2f}\n'
+                f'Envío: ${Decimal(orden.envio):,.2f}\n'
+                f'Total de la compra: ${Decimal(orden.total):,.2f} ({orden.moneda})\n\n'
+                'Puedes consultar el detalle completo de tus pedidos desde tu '
+                'perfil en RefriMaster. Si tienes dudas, contáctanos.\n\n'
+                'Saludos,\nEquipo RefriMaster'
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[orden.email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        # La orden ya se creó correctamente: el correo no debe romper la
+        # respuesta, pero el fallo debe quedar registrado en el log.
+        logger.error('No se pudo enviar la confirmación de la orden %s: %s', orden.numero, exc)
     return True
 
 

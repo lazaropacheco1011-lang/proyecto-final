@@ -491,14 +491,14 @@ class MaterialUtilizadoViewSet(viewsets.ModelViewSet):
         qs = super().get_queryset()
         user = self.request.user
         if has_role(user, CLIENTE):
-            return qs.filter(cliente__user=user)
+            return qs.filter(orden__cliente__user=user)
         if has_role(user, TECNICO):
-            return qs.filter(tecnico__user=user)
+            return qs.filter(orden__tecnico__user=user)
         if is_supervisor(user):
             tecnicos_ids = get_supervisor_tecnico_ids(user)
             if tecnicos_ids:
                 return qs.filter(
-                    Q(tecnico__user_id__in=tecnicos_ids) | Q(tecnico__isnull=True)
+                    Q(orden__tecnico__user_id__in=tecnicos_ids) | Q(orden__tecnico__isnull=True)
                 )
             return qs
         return qs

@@ -6,7 +6,7 @@ from rest_framework import serializers
 from apps.accounts.models import Tecnico
 from apps.clientes.models import Cliente
 from apps.core.permissions import CLIENTE, has_role
-from apps.materiales.services import descontar_inventario
+from apps.materiales.services import descontar_inventario, reponer_inventario
 from apps.servicios.models import (
     EstadoOrdenLog,
     MaterialUtilizado,
@@ -27,41 +27,13 @@ class EstadoOrdenLogSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class MaterialUtilizadoSerializer(serializers.ModelSerializer):
-    material_nombre = serializers.CharField(source='material.nombre', read_only=True)
-    material_codigo = serializers.CharField(source='material.codigo', read_only=True)
-    material_unidad = serializers.CharField(source='material.get_unidad_medida_display', read_only=True)
-    stock_actual = serializers.DecimalField(
-        source='material.cantidad_disponible', read_only=True, max_digits=12, decimal_places=2
-    )
+class MaterialUtilizadoInventarioMixin:
+    """Registro de materiales con gestión de inventario (RN-06).
 
-    class Meta:
-        model = MaterialUtilizado
-        fields = [
-            'id', 'orden', 'material', 'material_nombre', 'material_codigo',
-            'material_unidad', 'cantidad', 'precio_unitario', 'subtotal',
-            'stock_actual', 'created_at',
-        ]
-        read_only_fields = ['id', 'created_at', 'subtotal']
-
-
-class MaterialUtilizadoSerializerSinCostos(serializers.ModelSerializer):
-    """Sin campos de precio para técnicos."""
-    material_nombre = serializers.CharField(source='material.nombre', read_only=True)
-    material_codigo = serializers.CharField(source='material.codigo', read_only=True)
-    material_unidad = serializers.CharField(source='material.get_unidad_medida_display', read_only=True)
-    stock_actual = serializers.DecimalField(
-        source='material.cantidad_disponible', read_only=True, max_digits=12, decimal_places=2
-    )
-
-    class Meta:
-        model = MaterialUtilizado
-        fields = [
-            'id', 'orden', 'material', 'material_nombre', 'material_codigo',
-            'material_unidad', 'cantidad', 'stock_actual', 'created_at',
-        ]
-        read_only_fields = ['id', 'created_at']
-
+    Se comparte entre los serializers de materiales para que TODAS las rutas
+    de escritura (panel interno y técnicos) validen el stock y descuenten /
+    repongan el inventario de la misma manera, registrando el movimiento.
+    """
     def validate(self, attrs):
         material = attrs.get('material')
         cantidad = attrs.get('cantidad')
@@ -109,7 +81,6 @@ class MaterialUtilizadoSerializerSinCostos(serializers.ModelSerializer):
                 motivo=f'Ajuste en orden {instance.orden.numero}',
             )
         elif diferencia < 0:
-            from apps.materiales.services import reponer_inventario
             reponer_inventario(
                 material, abs(diferencia),
                 usuario=self.context['request'].user,
@@ -118,6 +89,42 @@ class MaterialUtilizadoSerializerSinCostos(serializers.ModelSerializer):
 
         validated_data.pop('material', None)
         return super().update(instance, validated_data)
+
+
+class MaterialUtilizadoSerializer(MaterialUtilizadoInventarioMixin, serializers.ModelSerializer):
+    material_nombre = serializers.CharField(source='material.nombre', read_only=True)
+    material_codigo = serializers.CharField(source='material.codigo', read_only=True)
+    material_unidad = serializers.CharField(source='material.get_unidad_medida_display', read_only=True)
+    stock_actual = serializers.DecimalField(
+        source='material.cantidad_disponible', read_only=True, max_digits=12, decimal_places=2
+    )
+
+    class Meta:
+        model = MaterialUtilizado
+        fields = [
+            'id', 'orden', 'material', 'material_nombre', 'material_codigo',
+            'material_unidad', 'cantidad', 'precio_unitario', 'subtotal',
+            'stock_actual', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'subtotal']
+
+
+class MaterialUtilizadoSerializerSinCostos(MaterialUtilizadoInventarioMixin, serializers.ModelSerializer):
+    """Sin campos de precio para técnicos."""
+    material_nombre = serializers.CharField(source='material.nombre', read_only=True)
+    material_codigo = serializers.CharField(source='material.codigo', read_only=True)
+    material_unidad = serializers.CharField(source='material.get_unidad_medida_display', read_only=True)
+    stock_actual = serializers.DecimalField(
+        source='material.cantidad_disponible', read_only=True, max_digits=12, decimal_places=2
+    )
+
+    class Meta:
+        model = MaterialUtilizado
+        fields = [
+            'id', 'orden', 'material', 'material_nombre', 'material_codigo',
+            'material_unidad', 'cantidad', 'stock_actual', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
 
 
 class VisitaTecnicaSerializer(serializers.ModelSerializer):
