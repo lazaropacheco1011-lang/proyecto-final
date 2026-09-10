@@ -12,6 +12,8 @@ from apps.clientes.serializers import (
     DireccionInstalacionSerializer,
 )
 from apps.core.permissions import (
+    ADMIN,
+    ALMACEN,
     CLIENTE,
     SUPERVISOR,
     TECNICO,
@@ -184,11 +186,23 @@ class IsClienteRead(BasePermission):
 
 
 class DireccionAccess(BasePermission):
-    """Técnicos no acceden a direcciones de instalación."""
+    """Requiere autenticación; técnicos no acceden a direcciones de instalación."""
     message = 'Los técnicos no tienen acceso a direcciones de instalación.'
 
     def has_permission(self, request, view):
-        return not has_role(request.user, TECNICO)
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        return not has_role(user, TECNICO)
+
+    def has_object_permission(self, request, view, obj):
+        user = request.user
+        if has_role(user, ADMIN, SUPERVISOR, ALMACEN):
+            return True
+        if has_role(user, CLIENTE):
+            cliente = getattr(obj, 'cliente', None)
+            return bool(cliente and cliente.user_id == user.id)
+        return False
 
 
 class DireccionInstalacionViewSet(viewsets.ModelViewSet):
@@ -210,12 +224,27 @@ class DireccionInstalacionViewSet(viewsets.ModelViewSet):
             return qs.filter(cliente__user=user)
         return qs
 
+    def _cliente_actual(self):
+        """Perfil de cliente del usuario autenticado, si es cliente."""
+        user = self.request.user
+        if has_role(user, CLIENTE):
+            return getattr(user, 'perfil_cliente', None)
+        return None
+
     def perform_create(self, serializer):
-        obj = serializer.save()
+        extra = {}
+        cliente = self._cliente_actual()
+        if cliente is not None:
+            extra['cliente'] = cliente
+        obj = serializer.save(**extra)
         register_audit(self.request.user, 'crear', obj, model_name='clientes.direccioninstalacion')
 
     def perform_update(self, serializer):
-        obj = serializer.save()
+        extra = {}
+        cliente = self._cliente_actual()
+        if cliente is not None:
+            extra['cliente'] = cliente
+        obj = serializer.save(**extra)
         register_audit(self.request.user, 'actualizar', obj, model_name='clientes.direccioninstalacion')
 
     def perform_destroy(self, instance):

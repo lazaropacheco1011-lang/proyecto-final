@@ -39,14 +39,32 @@
     h1 { font-size: 22px; margin: 0 0 8px; }
     p { color: #475569; font-size: 15px; margin: 0; }
     a { color: #0284C7; }
+    .btn {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 10px 22px;
+      border-radius: 12px;
+      background: #0284C7;
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .btn:hover { background: #0369A1; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="spinner"></div>
-    <h1>Autorizando tu pago con PayPal</h1>
-    <p>Estamos confirmando la transacción. Serás redirigido automáticamente a la confirmación del pedido.</p>
-    <p style="margin-top: 16px; font-size: 13px;">Si la página no se redirige en unos segundos, <a id="manualLink" href="/checkout/exito/">haz clic aquí</a>.</p>
+    <div id="payLoading">
+      <div class="spinner"></div>
+      <h1>Autorizando tu pago con PayPal</h1>
+      <p>Estamos confirmando la transacción. Serás redirigido a la confirmación del pedido cuando el pago esté aprobado.</p>
+      <p style="margin-top: 16px; font-size: 13px;">Si la página se queda cargando, <a id="manualLink" href="/checkout/">regresa al pago</a>.</p>
+    </div>
+    <div id="payError" style="display:none;">
+      <h1>No se pudo confirmar el pago</h1>
+      <p id="payErrorMsg">Tu pago de PayPal no pudo ser confirmado.</p>
+      <a class="btn" id="payBack" href="/checkout/">Volver al pago</a>
+    </div>
   </div>
   <script>
     (function () {
@@ -54,25 +72,56 @@
       var orden = qs.get('orden');
       var token = qs.get('token');
       var url = '/checkout/exito/?orden=' + encodeURIComponent(orden || '');
-      document.getElementById('manualLink').href = url;
+      var api = new URLSearchParams(location.search).get('api') ||
+                window.REFRI_API ||
+                window.location.origin;
 
-      if (token) {
-        var api = window.REFRI_API || 'http://127.0.0.1:8000';
-        fetch(api + '/api/tienda/pagos/paypal/aprobar/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orden: orden, token: token }),
-        })
-          .then(function (res) { return res.json().catch(function () { return {}; }); })
-          .then(function (data) {
-            window.location.href = url;
-          })
-          .catch(function () {
-            window.location.href = url;
-          });
-      } else {
-        setTimeout(function () { window.location.href = url; }, 1500);
+      function showError(msg) {
+        var loading = document.getElementById('payLoading');
+        var error = document.getElementById('payError');
+        if (loading) loading.style.display = 'none';
+        if (error) error.style.display = 'block';
+        var em = document.getElementById('payErrorMsg');
+        if (em && msg) em.textContent = msg;
+        var back = document.getElementById('payBack');
+        if (back) back.href = '/checkout/?orden=' + encodeURIComponent(orden || '');
       }
+
+      function irConfirmacion() {
+        window.location.href = url;
+      }
+
+      var manual = document.getElementById('manualLink');
+      if (manual) manual.href = '/checkout/?orden=' + encodeURIComponent(orden || '');
+
+      if (!orden || !token) {
+        showError('No se recibió la referencia de pago de PayPal. Si tu pedido quedó pendiente, vuelve al pago para intentarlo.');
+        return;
+      }
+
+      fetch(api + '/api/tienda/pagos/paypal/aprobar/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orden: orden, token: token }),
+      })
+        .then(function (res) {
+          return res.json().catch(function () { return {}; }).then(function (data) {
+            return { ok: res.ok, status: res.status, data: data };
+          });
+        })
+        .then(function (r) {
+          if (r.ok && r.data && r.data.estado_pago === 'aprobado') {
+            irConfirmacion();
+          } else {
+            showError(
+              (r.data && r.data.detail) ||
+              'Tu pago de PayPal no se pudo capturar. Tu pedido quedó pendiente: vuelve al pago para intentarlo.'
+            );
+          }
+        })
+        .catch(function () {
+          showError('No pudimos conectarnos con el servidor para confirmar tu pago. Vuelve al pago e inténtalo de nuevo.');
+        });
     })();
   </script>
   <script src="/js/whatsapp.js"></script>

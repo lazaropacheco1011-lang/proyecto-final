@@ -27,6 +27,18 @@ def _redondear(valor):
     return Decimal(valor).quantize(Decimal('0.01'))
 
 
+def _precio_efectivo(producto):
+    """Precio real que se cobra: el de oferta si el producto está en oferta
+    y tiene precio de oferta válido; en caso contrario, el precio normal.
+
+    El servidor es la fuente de verdad del precio: el frontend nunca aporta
+    el precio de la orden, este se recalcula siempre desde la base de datos.
+    """
+    if producto.en_oferta and producto.precio_oferta is not None:
+        return producto.precio_oferta
+    return producto.precio
+
+
 def crear_orden_desde_carrito(carrito, datos_cliente, request=None):
     """Crea la orden y sus items a partir de un carrito validado.
 
@@ -40,7 +52,8 @@ def crear_orden_desde_carrito(carrito, datos_cliente, request=None):
         ).select_related('categoria').first()
         if not producto:
             raise ValueError(f'El producto {linea["producto_id"]} no está disponible.')
-        if producto.precio is None:
+        precio = _precio_efectivo(producto)
+        if precio is None:
             raise ValueError(f'El producto "{producto.nombre}" no tiene precio.')
         cantidad = int(linea.get('cantidad') or 1)
         if cantidad < 1:
@@ -55,7 +68,6 @@ def crear_orden_desde_carrito(carrito, datos_cliente, request=None):
                 pk=producto.pk
             ).values_list('stock', flat=True).first() or 0
             raise ValueError(f'Solo hay {stock_actual} unidades de "{producto.nombre}".')
-        precio = producto.precio
         line_total = _redondear(Decimal(precio) * cantidad)
         items.append({
             'producto': producto,

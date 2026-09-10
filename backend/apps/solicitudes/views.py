@@ -9,8 +9,12 @@ from apps.solicitudes.serializers import SolicitudInstalacionSerializer
 
 
 class IsNotTecnicoForWrite(BasePermission):
-    """Bloquea técnicos en acciones de escritura."""
+    """Requiere autenticación y bloquea técnicos en acciones de escritura."""
+    message = 'Debes iniciar sesión para acceder a solicitudes de instalación.'
+
     def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
         if request.method in SAFE_METHODS:
             return True
         return not has_role(request.user, TECNICO)
