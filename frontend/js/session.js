@@ -37,16 +37,57 @@
     toast._t = setTimeout(function () { el.className = 'toast'; }, 3600);
   }
 
-  function apiAuth(path, options) {
+  async function tryRefresh() {
+    var refresh = localStorage.getItem('refri_refresh');
+    if (!refresh) return false;
+    try {
+      var res = await fetch(API_BASE + '/api/auth/refresh/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: refresh }),
+      });
+      var data = await res.json();
+      if (!res.ok || !data.access) return false;
+      localStorage.setItem('refri_access', data.access);
+      if (data.refresh) localStorage.setItem('refri_refresh', data.refresh);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function apiAuth(path, options) {
     options = options || {};
     var token = localStorage.getItem('refri_access');
-    return fetch(API_BASE + path, {
-      ...options,
-      headers: {
-        ...(options.headers || {}),
-        ...(token ? { 'Authorization': 'Bearer ' + token } : {}),
-      },
-    });
+    var headers = Object.assign({}, options.headers || {});
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+
+    var res = await fetch(API_BASE + path, Object.assign({}, options, { headers: headers }));
+
+    if (res.status === 401) {
+      if (await tryRefresh()) {
+        headers['Authorization'] = 'Bearer ' + localStorage.getItem('refri_access');
+        res = await fetch(API_BASE + path, Object.assign({}, options, { headers: headers }));
+      } else if (path.indexOf('/api/auth/logout/') === -1) {
+        limpiarSesion();
+      }
+    }
+    return res;
+  }
+
+  function limpiarSesion() {
+    localStorage.removeItem('refri_access');
+    localStorage.removeItem('refri_refresh');
+    localStorage.removeItem('refri_user');
+    var area = $('#sessionArea');
+    if (area) {
+      area.classList.add('hidden');
+      area.classList.remove('flex');
+      area.innerHTML = '';
+    }
+    var loginBtns = $('#loginBtns');
+    if (loginBtns) loginBtns.classList.remove('hidden');
+    $$('[data-open="login"]').forEach(function (btn) { btn.classList.remove('hidden'); });
   }
 
   function setBusy(sel, busy) {
@@ -135,7 +176,8 @@
       setProfMsg('', '');
       openModal('profile');
     } catch (e) {
-      toast('No se pudo cargar tu perfil.', 'error');
+      var fallenElToken = !localStorage.getItem('refri_access');
+      toast(fallenElToken ? 'Tu sesión expiró. Vuelve a iniciar sesión.' : 'No se pudo cargar tu perfil.', 'error');
     }
   }
 
@@ -203,14 +245,7 @@
             body: JSON.stringify({ refresh: refresh || '' }),
           });
         } catch (e) { /* el token se limpia igual */ }
-        localStorage.removeItem('refri_access');
-        localStorage.removeItem('refri_refresh');
-        localStorage.removeItem('refri_user');
-        area.classList.add('hidden');
-        area.classList.remove('flex');
-        area.innerHTML = '';
-        if (loginBtns) loginBtns.classList.remove('hidden');
-        loginTriggers.forEach(function (btn) { btn.classList.remove('hidden'); });
+        limpiarSesion();
         toast('Sesión cerrada correctamente.', 'success');
       });
     }
