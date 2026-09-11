@@ -5197,7 +5197,7 @@
     mis_equipos: { title: 'Mis equipos', icon: 'ac_unit', subtitle: 'Equipos registrados por ti', roles: ['cliente'] },
     solicitudes: { title: 'Solicitudes', icon: 'assignment', subtitle: 'Solicitudes de instalación', roles: ['administrador', 'supervisor'] },
     instalaciones: { title: 'Instalaciones', icon: 'home_repair_service', subtitle: 'Agenda de instalaciones', roles: ['administrador', 'supervisor', 'tecnico'] },
-    servicios: { title: 'Servicios', icon: 'handyman', subtitle: 'Órdenes de trabajo y servicio', roles: ['administrador', 'supervisor', 'tecnico', 'cliente'] },
+    servicios: { title: 'Servicios', icon: 'handyman', menuTitle: 'Reparaciones', subtitle: 'Órdenes de trabajo y servicio', roles: ['administrador', 'supervisor', 'tecnico', 'cliente'] },
     mantenimientos: { title: 'Mantenimientos', icon: 'build', subtitle: 'Preventivos y correctivos de equipos', roles: ['administrador', 'supervisor', 'tecnico', 'cliente'] },
     evaluaciones: { title: 'Calificaciones', icon: 'star', subtitle: 'Evaluaciones de satisfacción del cliente', roles: ['administrador', 'supervisor', 'cliente'] },
     visitas: { title: 'Visitas técnicas', icon: 'home_pin', subtitle: 'Visitas técnicas programadas', roles: ['administrador', 'supervisor', 'tecnico'] },
@@ -5213,12 +5213,13 @@
   };
 
   var SIDEBAR_GROUPS = [
-    { label: 'Principal', icon: 'home', keys: ['dashboard', 'clientes', 'supervisores', 'tecnicos', 'mis_equipos'], collapsed: false },
-    { label: 'Operaciones', icon: 'engineering', keys: ['equipos', 'solicitudes', 'instalaciones', 'servicios', 'agenda'], collapsed: false },
-    { label: 'Mantenimiento', icon: 'build', keys: ['mantenimientos', 'visitas', 'evaluaciones'], collapsed: false },
-    { label: 'Ventas', icon: 'point_of_sale', keys: ['cotizaciones', 'pagos', 'tienda'], collapsed: false },
-    { label: 'Almacén', icon: 'warehouse', keys: ['inventario', 'almacen'], collapsed: false },
-    { label: 'Sistema', icon: 'settings', keys: ['reportes', 'usuarios', 'perfil'], collapsed: false },
+    { label: 'Panel de control', icon: 'dashboard', keys: ['dashboard', 'mis_equipos'], collapsed: false },
+    { label: 'Operaciones', icon: 'engineering', keys: ['solicitudes', 'instalaciones', 'servicios', 'mantenimientos', 'agenda', 'visitas'], collapsed: false },
+    { label: 'Comercial', icon: 'point_of_sale', keys: ['tienda', 'cotizaciones', 'pagos', 'evaluaciones'], collapsed: false },
+    { label: 'Inventario', icon: 'warehouse', keys: ['equipos', 'inventario', 'almacen'], collapsed: false },
+    { label: 'Personal y clientes', icon: 'groups', keys: ['clientes', 'tecnicos', 'supervisores'], collapsed: false },
+    { label: 'Administración', icon: 'admin_panel_settings', keys: ['reportes', 'usuarios'], collapsed: false },
+    { label: 'Cuenta', icon: 'account_circle', keys: ['perfil'], collapsed: false },
   ];
 
   function buildNav() {
@@ -5229,10 +5230,11 @@
       group.keys.forEach(function (key) {
         var s = SECTIONS[key];
         if (!s || s.roles.indexOf(role) < 0) return;
+        var label = s.menuTitle || s.title;
         items.push(
-          '<button class="nav-item" data-nav="' + key + '" data-tooltip="' + esc(s.title) + '">' +
+          '<button class="nav-item" data-nav="' + key + '" data-tooltip="' + esc(label) + '">' +
           '<span class="material-symbols-outlined">' + s.icon + '</span>' +
-          '<span>' + esc(s.title) + '</span></button>'
+          '<span>' + esc(label) + '</span></button>'
         );
       });
       if (items.length === 0) return;
