@@ -4707,11 +4707,20 @@
   async function openSolicitudForm(item) {
     var clientes = [];
     try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) { clientes = []; }
+    var tipoActual = item ? item.tipo_equipo_solicitado : '';
+    var tipoSolicitudOptions = [
+      { value: 'Instalación', label: 'Instalación' },
+      { value: 'Reparación', label: 'Reparación' },
+      { value: 'Mantenimiento', label: 'Mantenimiento' },
+    ];
+    if (tipoActual && tipoSolicitudOptions.every(function (o) { return o.value !== tipoActual; })) {
+      tipoSolicitudOptions.unshift({ value: tipoActual, label: tipoActual });
+    }
     var fields = [
       { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
         options: optList(clientes, 'id', 'nombre_completo') },
-      { name: 'tipo_equipo_solicitado', label: 'Tipo de equipo solicitado', type: 'text', required: true,
-        value: item ? item.tipo_equipo_solicitado : '' },
+      { name: 'tipo_equipo_solicitado', label: 'Tipo de solicitud ▾', type: 'select', required: true,
+        value: tipoActual, options: tipoSolicitudOptions },
       { name: 'prioridad', label: 'Prioridad', type: 'select', value: item ? item.prioridad : 'media',
         options: [{ value: 'baja', label: 'Baja' }, { value: 'media', label: 'Media' },
                   { value: 'alta', label: 'Alta' }, { value: 'urgente', label: 'Urgente' }] },
