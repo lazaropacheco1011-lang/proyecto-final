@@ -19,13 +19,18 @@ def notify_user(user, tipo, titulo, mensaje):
 
 def notify_solicitud_creada(solicitud, staff_users):
     """Avisa al personal (admin/supervisor) de una nueva solicitud (RF-07)."""
+    tipo = solicitud.get_tipo_solicitud_display().lower()
+    equipo = (solicitud.tipo_equipo_solicitado or '').strip()
+    mensaje = f'{solicitud.cliente.nombre_completo} solicitó {tipo}'
+    if equipo:
+        mensaje += f' del equipo "{equipo}"'
+    mensaje += f' (solicitud #{solicitud.pk}).'
     for user in staff_users:
         notify_user(
             user,
             Notificacion.Tipo.SISTEMA,
-            'Nueva solicitud de instalación',
-            f'{solicitud.cliente.nombre_completo} solicitó instalación de '
-            f'"{solicitud.tipo_equipo_solicitado}" (solicitud #{solicitud.pk}).',
+            f'Nueva solicitud de {tipo}',
+            mensaje,
         )
 
 
@@ -43,12 +48,16 @@ def notify_solicitud_estado(solicitud, estado_nuevo):
     titulo = titulos.get(estado_nuevo)
     if not titulo:
         return
+    tipo = solicitud.get_tipo_solicitud_display().lower()
+    equipo = (solicitud.tipo_equipo_solicitado or '').strip()
+    detalle = f' de {tipo}'
+    if equipo:
+        detalle += f' "{equipo}"'
     notify_user(
         cliente.user,
         Notificacion.Tipo.CAMBIO_ESTADO,
         titulo,
-        f'Tu solicitud #{solicitud.pk} de "{solicitud.tipo_equipo_solicitado}" '
-        f'cambió a estado {solicitud.get_estado_display()}.',
+        f'Tu solicitud #{solicitud.pk}{detalle} cambió a estado {solicitud.get_estado_display()}.',
     )
 
 

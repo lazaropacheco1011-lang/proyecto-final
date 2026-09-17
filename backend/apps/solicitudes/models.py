@@ -19,13 +19,23 @@ class SolicitudInstalacion(models.Model):
         RECHAZADA = 'rechazada', 'Rechazada'
         COMPLETADA = 'completada', 'Completada'
 
+    class TipoSolicitud(models.TextChoices):
+        INSTALACION = 'instalacion', 'Instalación'
+        REPARACION = 'reparacion', 'Reparación'
+        MANTENIMIENTO = 'mantenimiento', 'Mantenimiento'
+        OTRO = 'otro', 'Otro'
+
     cliente = models.ForeignKey(
         Cliente,
         on_delete=models.CASCADE,
         related_name='solicitudes',
         verbose_name='cliente',
     )
-    tipo_equipo_solicitado = models.CharField('tipo de equipo solicitado', max_length=150)
+    tipo_solicitud = models.CharField(
+        'tipo de solicitud', max_length=20,
+        choices=TipoSolicitud.choices, default=TipoSolicitud.OTRO,
+    )
+    tipo_equipo_solicitado = models.CharField('equipo solicitado', max_length=150, blank=True, default='')
     descripcion = models.TextField('descripción del requerimiento', blank=True)
     prioridad = models.CharField(
         'prioridad', max_length=20, choices=Prioridad.choices, default=Prioridad.MEDIA

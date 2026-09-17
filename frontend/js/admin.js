@@ -120,6 +120,10 @@
     'tecnico': 'badge-primary',
     'almacen': 'badge-info',
     'cliente': 'badge-neutral',
+    'instalacion': 'badge-primary',
+    'reparacion': 'badge-warning',
+    'mantenimiento': 'badge-info',
+    'otro': 'badge-neutral',
   };
 
   function estadoBadge(value, label) {
@@ -1298,7 +1302,7 @@
     sdCache = {};
     cssClear('solicitudes');
     setViewLoading();
-    var state = st('solicitudes', { estado: '', prioridad: '' });
+    var state = st('solicitudes', { estado: '', prioridad: '', tipo_solicitud: '' });
     var data;
     try {
       data = await loadList('/api/solicitudes/', state, ['estado', 'prioridad']);
@@ -1306,9 +1310,16 @@
       setViewError(apiErrorMessage(err));
       return;
     }
+    var items = (data.results || []).slice();
+    var viewData = data;
+    if (state.tipo_solicitud) {
+      items = items.filter(function (s) { return s.tipo_solicitud === state.tipo_solicitud; });
+      viewData = Object.assign({}, data, { count: items.length, previous: null, next: null });
+    }
     var columns = [
       { label: '#', render: function (s) { return '<span class="font-semibold">' + s.id + '</span>'; } },
       { label: 'Cliente', key: 'cliente_nombre' },
+      { label: 'Tipo', render: function (s) { return estadoBadge(s.tipo_solicitud, s.tipo_solicitud_display || '—'); } },
       { label: 'Equipo solicitado', key: 'tipo_equipo_solicitado' },
       { label: 'Prioridad', render: function (s) { return estadoBadge(s.prioridad, s.prioridad_display); } },
       { label: 'Estado', render: function (s) { return estadoBadge(s.estado, s.estado_display); } },
@@ -1325,11 +1336,14 @@
     ];
     $('#view').innerHTML = viewShell({
       state: state,
-      data: data,
+      data: viewData,
       toolbar: {
         search: state.search,
         placeholder: 'Buscar por cliente o equipo solicitado…',
         filters: [
+          { name: 'tipo_solicitud', label: 'Tipo', value: state.tipo_solicitud, options: [
+              { value: 'instalacion', label: 'Instalación' }, { value: 'reparacion', label: 'Reparación' },
+              { value: 'mantenimiento', label: 'Mantenimiento' }, { value: 'otro', label: 'Otro' } ] },
           { name: 'estado', label: 'Estado', value: state.estado, options: [
               { value: 'pendiente', label: 'Pendiente' }, { value: 'aprobada', label: 'Aprobada' },
               { value: 'reprogramada', label: 'Reprogramada' }, { value: 'rechazada', label: 'Rechazada' },
@@ -1341,13 +1355,13 @@
         buttons: [{ action: 'crear', icon: 'add', label: 'Nueva solicitud' }],
       },
       columns: columns,
-      items: data.results || [],
+      items: items,
     });
     cssRegister({
       key: 'solicitudes',
       url: '/api/solicitudes/',
       columns: columns,
-      fields: ['id', 'cliente_nombre', 'tipo_equipo_solicitado', 'prioridad_display', 'estado_display'],
+      fields: ['id', 'cliente_nombre', 'tipo_solicitud_display', 'tipo_equipo_solicitado', 'prioridad_display', 'estado_display'],
       active: ['estado', 'prioridad'],
     });
   }
@@ -1596,17 +1610,45 @@
     $('#agendaDia').innerHTML = html;
   }
 
-  function loadLeaflet() {
-    return new Promise(function (resolve) {
-      if (window.L && window.L.map) { resolve(window.L); return; }
+  var LEAFLET_SOURCES = [
+    { js: '/assets/leaflet/leaflet.js', css: '/assets/leaflet/leaflet.css' },
+    { js: '/assets/leaflet/leaflet.js', css: '/assets/leaflet/leaflet.css' },
+  ];
+
+  function injectLeaflet(src) {
+    return new Promise(function (resolve, reject) {
       var css = document.createElement('link');
       css.rel = 'stylesheet';
-      css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      css.href = src.css;
       document.head.appendChild(css);
       var s = document.createElement('script');
-      s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      s.onload = function () { resolve(window.L); };
+      s.src = src.js;
+      var done = false;
+      var timer = setTimeout(function () {
+        if (!done) { done = true; reject(new Error('No se pudo cargar el mapa (tiempo agotado).')); }
+      }, 12000);
+      s.onload = function () {
+        if (window.L && window.L.map) {
+          done = true;
+          clearTimeout(timer);
+          resolve(window.L);
+        } else {
+          done = true;
+          clearTimeout(timer);
+          reject(new Error('El mapa no cargó correctamente.'));
+        }
+      };
+      s.onerror = function () {
+        if (!done) { done = true; clearTimeout(timer); reject(new Error('La librería del mapa no está disponible.')); }
+      };
       document.head.appendChild(s);
+    });
+  }
+
+  function loadLeaflet() {
+    if (window.L && window.L.map) return Promise.resolve(window.L);
+    return injectLeaflet(LEAFLET_SOURCES[0]).catch(function () {
+      return injectLeaflet(LEAFLET_SOURCES[1]);
     });
   }
 
@@ -1623,12 +1665,24 @@
         '<div class="flex h-full items-center justify-center text-sm text-on-surface-variant">' + esc(apiErrorMessage(err)) + '</div>';
       return;
     }
-    var L = await loadLeaflet();
+    var L;
+    try {
+      L = await loadLeaflet();
+    } catch (err) {
+      container.querySelector('#mapaInstalaciones').innerHTML =
+        '<div class="flex h-full items-center justify-center flex-col gap-3 p-6 text-center text-sm text-on-surface-variant">' +
+        '<span class="material-symbols-outlined text-3xl text-error">map</span>' +
+        '<p>' + esc(err.message || 'No se pudo cargar el mapa.') + '</p>' +
+        '<button class="btn btn-primary" data-action="reintentar-mapa">Intentar de nuevo</button></div>';
+      var retryBtn = container.querySelector('[data-action="reintentar-mapa"]');
+      if (retryBtn) retryBtn.addEventListener('click', renderMapa);
+      return;
+    }
     var mapaEl = document.getElementById('mapaInstalaciones');
     if (!mapaEl) return;
     var map = L.map(mapaEl).setView([19.4792, -70.6931], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+      attribution: '&copy; Esri &copy; OpenStreetMap contributors · Powered by Esri',
       maxZoom: 19,
     }).addTo(map);
     if (!puntos.length) {
@@ -4047,7 +4101,11 @@
       { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
         options: optList(clientes, 'id', 'nombre_completo') },
       { name: 'solicitud', label: 'Solicitud relacionada', type: 'select', value: item ? item.solicitud : '',
-        options: optList(solicitudes, 'id', function (s) { return '#' + s.id + ' · ' + s.tipo_equipo_solicitado; }) },
+        options: optList(solicitudes, 'id', function (s) {
+          var label = '#' + s.id + ' · ' + (s.tipo_solicitud_display || '');
+          if (s.tipo_equipo_solicitado) label += ' · ' + s.tipo_equipo_solicitado;
+          return label;
+        }) },
       { name: 'tecnico', label: 'Técnico que cotiza', type: 'select', value: item ? item.tecnico : '',
         options: optList(tecnicos, 'id', 'nombre') },
       { name: 'validez_dias', label: 'Días de validez', type: 'number', min: 1, value: item ? item.validez_dias : '30' },
@@ -4707,20 +4765,20 @@
   async function openSolicitudForm(item) {
     var clientes = [];
     try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) { clientes = []; }
-    var tipoActual = item ? item.tipo_equipo_solicitado : '';
     var tipoSolicitudOptions = [
-      { value: 'Instalación', label: 'Instalación' },
-      { value: 'Reparación', label: 'Reparación' },
-      { value: 'Mantenimiento', label: 'Mantenimiento' },
+      { value: 'instalacion', label: 'Instalación' },
+      { value: 'reparacion', label: 'Reparación' },
+      { value: 'mantenimiento', label: 'Mantenimiento' },
+      { value: 'otro', label: 'Otro' },
     ];
-    if (tipoActual && tipoSolicitudOptions.every(function (o) { return o.value !== tipoActual; })) {
-      tipoSolicitudOptions.unshift({ value: tipoActual, label: tipoActual });
-    }
     var fields = [
       { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
         options: optList(clientes, 'id', 'nombre_completo') },
-      { name: 'tipo_equipo_solicitado', label: 'Tipo de solicitud ▾', type: 'select', required: true,
-        value: tipoActual, options: tipoSolicitudOptions },
+      { name: 'tipo_solicitud', label: 'Tipo de solicitud', type: 'select', required: true,
+        value: item ? item.tipo_solicitud : 'otro', options: tipoSolicitudOptions },
+      { name: 'tipo_equipo_solicitado', label: 'Equipo solicitado (opcional)', type: 'text', required: false,
+        value: item ? item.tipo_equipo_solicitado : '',
+        placeholder: 'Ej: Nevera comercial 450 L, Split 12000 BTU…' },
       { name: 'prioridad', label: 'Prioridad', type: 'select', value: item ? item.prioridad : 'media',
         options: [{ value: 'baja', label: 'Baja' }, { value: 'media', label: 'Media' },
                   { value: 'alta', label: 'Alta' }, { value: 'urgente', label: 'Urgente' }] },
@@ -4824,7 +4882,11 @@
       { name: 'tecnico', label: 'Técnico responsable', type: 'select', value: item ? item.tecnico : '',
         options: optList(tecnicos, 'id', 'nombre') },
       { name: 'solicitud', label: 'Solicitud relacionada', type: 'select', value: item ? item.solicitud : '',
-        options: optList(solicitudes, 'id', function (s) { return '#' + s.id + ' · ' + s.tipo_equipo_solicitado; }) },
+        options: optList(solicitudes, 'id', function (s) {
+          var label = '#' + s.id + ' · ' + (s.tipo_solicitud_display || '');
+          if (s.tipo_equipo_solicitado) label += ' · ' + s.tipo_equipo_solicitado;
+          return label;
+        }) },
       { name: 'fecha_programada', label: 'Fecha programada', type: 'datetime-local', value: item ? dtLocal(item.fecha_programada) : '',
         hint: 'Selecciona la fecha y hora desde el calendario.' },
       { name: 'fecha_instalacion', label: 'Fecha de instalación', type: 'datetime-local', value: item ? dtLocal(item.fecha_instalacion) : '',
