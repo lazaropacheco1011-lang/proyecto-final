@@ -23,6 +23,66 @@ CARD_APROBADA = '4242424242424242'
 CARD_RECHAZADA_1 = '4000000000000002'
 CARD_RECHAZADA_2 = '4000000000000008'
 
+# ---------------------------------------------------------------------------
+# Disponibilidad de los métodos de pago
+# ---------------------------------------------------------------------------
+# Ningún método puede confirmar un cobro simulado fuera de sandbox. En
+# producción un método solo está disponible si existe un proveedor real
+# integrado y configurado; mientras no lo haya, se rechaza el pago con un
+# mensaje explícito en lugar de devolver una aprobación ficticia.
+
+MSG_NO_DISPONIBLE = 'Este método de pago no está disponible en este momento.'
+
+# Motivo por el que cada método no puede operarse en producción.
+BLOQUEOS_PRODUCCION = {
+    # No hay PSP de tarjetas integrado: solo existe la simulación por número.
+    'tarjeta': 'El pago con tarjeta no está disponible en este momento.',
+    # La billetera solo registra un pedido pendiente; no hay saldo interno
+    # real y persistente contra el que descontar.
+    'billetera': 'El pago con billetera no está disponible en este momento.',
+    # PayPal sí tiene integración real, pero exige credenciales válidas.
+    'paypal': 'El pago con PayPal no está disponible en este momento.',
+}
+
+
+def simulacion_activa():
+    """True solo en sandbox: nunca en producción."""
+    return settings.PAYMENT_MODE == 'sandbox'
+
+
+def _paypal_configurado():
+    return bool(settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET)
+
+
+def metodo_disponible(metodo):
+    """Indica si un método de pago puede usarse en este entorno.
+
+    Retorna (disponible, motivo). En sandbox todos los métodos están
+    disponibles. En producción solo lo está PayPal y únicamente si sus
+    credenciales reales están configuradas.
+    """
+    metodo = str(metodo or '').strip()
+    if simulacion_activa():
+        return True, ''
+    if settings.PAYMENT_MODE == 'disabled':
+        return False, 'Los pagos están deshabilitados en este momento.'
+    if metodo == 'paypal':
+        if _paypal_configurado():
+            return True, ''
+        return False, BLOQUEOS_PRODUCCION['paypal']
+    return False, BLOQUEOS_PRODUCCION.get(metodo, MSG_NO_DISPONIBLE)
+
+
+def metodos_disponibles():
+    """Lista los métodos de pago que realmente pueden usarse ahora mismo."""
+    from apps.tienda.models import PagoTienda
+
+    disponibles = []
+    for metodo in PagoTienda.Metodo.values:
+        if metodo_disponible(metodo)[0]:
+            disponibles.append(metodo)
+    return disponibles
+
 
 def _solo_digitos(value):
     return ''.join(ch for ch in str(value) if ch.isdigit())
@@ -103,7 +163,7 @@ def authorize_card(number, exp_month, exp_year, cvv, amount, currency='DOP'):
     marca = card_brand(number)
     ultimos = _solo_digitos(number)[-4:]
 
-    if settings.PAYMENT_MODE == 'sandbox':
+    if simulacion_activa():
         if _solo_digitos(number) == CARD_APROBADA:
             return {
                 'aprobado': True,
@@ -140,16 +200,15 @@ def authorize_card(number, exp_month, exp_year, cvv, amount, currency='DOP'):
             'motivo': 'declined',
         }
 
-    # Modo producción: aquí se integraría el SDK del proveedor de tarjetas.
-    # El número y el CVV se envían directamente al proveedor (tokenización)
-    # y nunca se guardan en la base de datos.
+    # Fuera de sandbox no hay PSP de tarjetas integrado, así que el cobro no
+    # puede autorizarse. Se falla cerrado y sin sugerir el modo de simulación.
     return {
         'aprobado': False,
-        'mensaje': 'Proveedor de tarjetas no configurado. Usa el modo sandbox.',
+        'mensaje': BLOQUEOS_PRODUCCION['tarjeta'],
         'referencia': '',
         'marca': marca,
         'ultimos_digitos': ultimos,
-        'motivo': 'not_configured',
+        'motivo': 'metodo_no_disponible',
     }
 
 
@@ -222,42 +281,47 @@ def crear_pago_paypal(monto, moneda, descripcion, aprobacion_url, cancel_url):
     """
     referencia = 'PP-' + secrets.token_hex(6).upper()
 
-    if settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET:
-        token = _paypal_access_token()
-        if not token:
-            return '', '', 'No se pudo autenticar con PayPal.'
-        status, data = _paypal_http(
-            'POST',
-            settings.PAYPAL_API_BASE + '/v2/checkout/orders',
-            data={
-                'intent': 'CAPTURE',
-                'purchase_units': [{
-                    'reference_id': referencia,
-                    'description': descripcion,
-                    'amount': {'currency_code': moneda, 'value': f'{float(monto):.2f}'},
-                }],
-                'application_context': {
-                    'brand_name': 'RefriMaster',
-                    'user_action': 'PAY_NOW',
-                    'return_url': aprobacion_url,
-                    'cancel_url': cancel_url,
-                },
-            },
-            token=token,
-        )
-        if status in (200, 201):
-            link = _paypal_approve_link(data)
-            return data.get('id', referencia), link or '', ''
-        return '', '', 'PayPal rechazó la creación de la orden de pago.'
+    if not _paypal_configurado():
+        # Sin credenciales solo se puede simular el flujo, y la simulación está
+        # vedada fuera de sandbox: nunca se devuelve una aprobación ficticia.
+        if not simulacion_activa():
+            return '', '', MSG_NO_DISPONIBLE
+        return referencia, aprobacion_url, ''
 
-    # Sandbox: aprobación simulada a través de nuestra propia página.
-    return referencia, aprobacion_url, ''
+    token = _paypal_access_token()
+    if not token:
+        return '', '', 'No se pudo autenticar con PayPal.'
+    status, data = _paypal_http(
+        'POST',
+        settings.PAYPAL_API_BASE + '/v2/checkout/orders',
+        data={
+            'intent': 'CAPTURE',
+            'purchase_units': [{
+                'reference_id': referencia,
+                'description': descripcion,
+                'amount': {'currency_code': moneda, 'value': f'{float(monto):.2f}'},
+            }],
+            'application_context': {
+                'brand_name': 'RefriMaster',
+                'user_action': 'PAY_NOW',
+                'return_url': aprobacion_url,
+                'cancel_url': cancel_url,
+            },
+        },
+        token=token,
+    )
+    if status in (200, 201):
+        link = _paypal_approve_link(data)
+        return data.get('id', referencia), link or '', ''
+    return '', '', 'PayPal rechazó la creación de la orden de pago.'
 
 
 def capturar_pago_paypal(paypal_order_id):
     """Captura un pago de PayPal previamente aprobado. Retorna (ok, mensaje)."""
-    if not (settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET):
-        if settings.PAYMENT_MODE != 'sandbox':
+    if not _paypal_configurado():
+        # Sin proveedor real solo existe la simulación, vedada fuera de sandbox:
+        # un pago nunca se confirma sin confirmación del proveedor.
+        if not simulacion_activa():
             return False, 'Procesador de pagos no configurado.'
         return True, 'aprobado'
     token = _paypal_access_token()
@@ -272,3 +336,24 @@ def capturar_pago_paypal(paypal_order_id):
     if status in (200, 201):
         return True, 'aprobado'
     return False, 'capture_failed'
+
+
+def reembolsar_pago(pago):
+    """Solicita el reembolso de un pago confirmado. Retorna (ok, mensaje).
+
+    Marcar el pago como reembolsado sin que el proveedor haya devuelto el
+    dinero deja constancia de un reembolso que nunca ocurrió, así que fuera de
+    sandbox la operación se rechaza: no existe integración de reembolso y no se
+    inventa una. En sandbox se mantiene el cambio de estado local para poder
+    probar el flujo completo.
+    """
+    if not simulacion_activa():
+        return False, (
+            'El reembolso automático no está disponible. Registra el reembolso '
+            'con el proveedor y luego marca el pago como reembolsado.'
+        )
+    if pago.metodo == 'paypal' and not _paypal_configurado():
+        return False, 'No hay proveedor de pagos configurado para reembolsar.'
+    if pago.estado != 'aprobado':
+        return False, 'Solo se pueden reembolsar pagos aprobados.'
+    return True, 'reembolsado'

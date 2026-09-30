@@ -10,9 +10,7 @@
   /* ------------------------------------------------------------------
    * Configuración de la API
    * ------------------------------------------------------------------ */
-  var API_BASE = new URLSearchParams(location.search).get('api') ||
-                 window.REFRI_API ||
-                 window.location.origin;
+  var API_BASE = window.REFRI_API || window.location.origin;
 
   var EMPRESA = {
     nombre: 'RefriMaster',

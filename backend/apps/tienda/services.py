@@ -39,10 +39,31 @@ def _precio_efectivo(producto):
     return producto.precio
 
 
+def reservar_stock(producto, cantidad):
+    """Descuenta stock de forma atómica. Lanza ValueError si no alcanza.
+
+    La condición ``stock__gte`` evita vender más unidades de las disponibles
+    aunque dos pedidos compitan por la última.
+    """
+    descontado = Producto.objects.filter(
+        pk=producto.pk, stock__gte=cantidad,
+    ).update(stock=F('stock') - cantidad)
+    if not descontado:
+        stock_actual = Producto.objects.filter(
+            pk=producto.pk
+        ).values_list('stock', flat=True).first() or 0
+        raise ValueError(f'Solo hay {stock_actual} unidades de "{producto.nombre}".')
+    return True
+
+
 def crear_orden_desde_carrito(carrito, datos_cliente, request=None):
     """Crea la orden y sus items a partir de un carrito validado.
 
     ``carrito`` es una lista de {producto_id, cantidad}.
+
+    El stock se reserva aquí, al crear la orden, y queda retenido hasta que la
+    orden se confirme o se cancele. Toda baja de stock pasa por
+    :func:`reservar_stock` y toda devolución por :func:`liberar_stock_orden`.
     """
     items = []
     subtotal = Decimal('0')
@@ -58,16 +79,7 @@ def crear_orden_desde_carrito(carrito, datos_cliente, request=None):
         cantidad = int(linea.get('cantidad') or 1)
         if cantidad < 1:
             raise ValueError('Las cantidades deben ser al menos 1.')
-        # Descuenta stock de forma atómica: la condición stock__gte evita
-        # vender más unidades de las disponibles aunque dos pedidos compitan.
-        descontado = Producto.objects.filter(
-            pk=producto.pk, stock__gte=cantidad,
-        ).update(stock=F('stock') - cantidad)
-        if not descontado:
-            stock_actual = Producto.objects.filter(
-                pk=producto.pk
-            ).values_list('stock', flat=True).first() or 0
-            raise ValueError(f'Solo hay {stock_actual} unidades de "{producto.nombre}".')
+        reservar_stock(producto, cantidad)
         line_total = _redondear(Decimal(precio) * cantidad)
         items.append({
             'producto': producto,
@@ -144,6 +156,42 @@ def registrar_pago(orden, metodo, estado, monto=None, **extra):
         moneda=orden.moneda,
         **extra,
     )
+
+
+def liberar_stock_orden(orden, motivo='', user=None):
+    """Cancela la orden y devuelve al inventario el stock que tenía reservado.
+
+    La devolución ocurre únicamente al entrar en estado CANCELADO. Como
+    CANCELADO es un estado terminal y re-cancelar una orden ya cancelada no
+    produce ningún cambio, el stock se devuelve como máximo una vez por orden,
+    sin importar cuántas veces se invoque esta función.
+    """
+    if orden.estado == Orden.Estado.CANCELADO:
+        return orden, False
+    orden, cambio = cambiar_estado_orden(
+        orden, Orden.Estado.CANCELADO, user, motivo,
+    )
+    return orden, cambio
+
+
+def rechazar_pago(orden, metodo, motivo='', user=None, **extra):
+    """Registra el pago fallido y libera el stock reservado por la orden.
+
+    Se usa para cualquier cobro que no llegó a confirmarse (tarjeta rechazada,
+    PayPal cancelado o fallido, billetera no permitida). Evita que quede
+    inventario retenido por un pago que nunca se cobró, y mantiene la orden, el
+    pago y el inventario coherentes entre sí.
+    """
+    with transaction.atomic():
+        pago = registrar_pago(orden, metodo, PagoTienda.Estado.RECHAZADO, **extra)
+        orden, cambio = liberar_stock_orden(
+            orden, motivo or 'Pago rechazado', user,
+        )
+    logger.info(
+        'Pago rechazado en la orden %s (%s): stock liberado=%s',
+        orden.numero, metodo, cambio,
+    )
+    return orden, pago
 
 
 def enviar_correo_confirmacion_orden(orden):

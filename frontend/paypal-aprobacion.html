@@ -72,9 +72,7 @@
       var orden = qs.get('orden');
       var token = qs.get('token');
       var url = '/checkout/exito/?orden=' + encodeURIComponent(orden || '');
-      var api = new URLSearchParams(location.search).get('api') ||
-                window.REFRI_API ||
-                window.location.origin;
+      var api = window.REFRI_API || window.location.origin;
 
       function showError(msg) {
         var loading = document.getElementById('payLoading');

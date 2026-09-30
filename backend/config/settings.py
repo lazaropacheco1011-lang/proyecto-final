@@ -303,12 +303,42 @@ TIENDA_MONEDA = os.getenv('TIENDA_MONEDA', 'DOP')
 COSTO_ENVIO = int(os.getenv('COSTO_ENVIO', '25000'))
 ENVIO_GRATIS_MINIMO = int(os.getenv('ENVIO_GRATIS_MINIMO', '500000'))
 
-# Modo del proveedor de pagos: 'sandbox' (simulación de tarjetas y PayPal)
-# o 'produccion' (requiere credenciales reales).
-PAYMENT_MODE = os.getenv('PAYMENT_MODE', 'sandbox').lower()
+# Modo del proveedor de pagos: 'sandbox' (simulación de tarjetas y PayPal),
+# 'produccion' (requiere un proveedor real) o 'disabled' (ningún cobro).
+#
+# En producción NO existe un valor predeterminado: si PAYMENT_MODE no está
+# definido explícitamente, el arranque falla en lugar de simular un cobro real.
+# Solo en desarrollo/pruebas se asume 'sandbox' para poder testear sin
+# configurar nada.
+PAYMENT_MODES_VALIDOS = ('sandbox', 'produccion', 'production', 'disabled')
+
+_payment_mode_raw = os.getenv('PAYMENT_MODE', '').strip().lower()
+if _payment_mode_raw:
+    if _payment_mode_raw not in PAYMENT_MODES_VALIDOS:
+        raise ImproperlyConfigured(
+            f'PAYMENT_MODE="{_payment_mode_raw}" no es válido. '
+            f'Usa uno de: {", ".join(PAYMENT_MODES_VALIDOS)}.'
+        )
+    PAYMENT_MODE = 'produccion' if _payment_mode_raw == 'production' else _payment_mode_raw
+else:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            'PAYMENT_MODE no está definido. Es obligatorio fuera de DEBUG: '
+            "define PAYMENT_MODE='produccion' cuando exista un proveedor real "
+            "de pagos, o 'disabled' mientras el método no esté disponible. "
+            'Nunca se asume sandbox en producción para no simular cobros.'
+        )
+    PAYMENT_MODE = 'sandbox'
 
 # PayPal (se usa urllib, sin dependencias extra).
-PAYPAL_MODE = os.getenv('PAYPAL_MODE', 'sandbox').lower()
+# En producción se apunta a la API real salvo que se indique 'sandbox'
+# explícitamente: no hay un valor predeterminado que redirija a la simulación.
+_paypal_mode_raw = os.getenv('PAYPAL_MODE', '').strip().lower()
+PAYPAL_MODE = _paypal_mode_raw or ('sandbox' if PAYMENT_MODE == 'sandbox' else 'live')
+if PAYPAL_MODE not in ('sandbox', 'live', 'produccion'):
+    raise ImproperlyConfigured(
+        f'PAYPAL_MODE="{PAYPAL_MODE}" no es válido. Usa sandbox, live o produccion.'
+    )
 PAYPAL_CLIENT_ID = os.getenv('PAYPAL_CLIENT_ID', '')
 PAYPAL_CLIENT_SECRET = os.getenv('PAYPAL_CLIENT_SECRET', '')
 PAYPAL_API_BASE = os.getenv(

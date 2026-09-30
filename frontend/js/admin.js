@@ -13,9 +13,7 @@
   /* ------------------------------------------------------------------
    * Configuración
    * ------------------------------------------------------------------ */
-  var API_BASE = new URLSearchParams(location.search).get('api') ||
-                 window.REFRI_API ||
-                 window.location.origin;
+  var API_BASE = window.REFRI_API || window.location.origin;
   var PAGE_SIZE = 20;
   var STAFF_ROLES = ['administrador', 'supervisor', 'tecnico', 'almacen'];
   var STOCK_MINIMO = 5;

@@ -7,9 +7,7 @@
 (function () {
   'use strict';
 
-  var API_BASE = new URLSearchParams(location.search).get('api') ||
-                 window.REFRI_API ||
-                 window.location.origin;
+  var API_BASE = window.REFRI_API || window.location.origin;
 
   var STAFF_ROLES = ['administrador', 'supervisor', 'tecnico', 'almacen'];
 
@@ -305,8 +303,8 @@
         var data = null;
         try { data = texto ? JSON.parse(texto) : null; } catch (e) { data = null; }
         if (!res.ok) {
-          var motivo = (data && (data.error || data.detail))
-            ? data.error || data.detail
+          var motivo = (data && (data.detalle || data.error || data.detail))
+            ? (data.detalle || data.error || data.detail)
             : ('Error ' + res.status);
           throw new Error(motivo);
         }

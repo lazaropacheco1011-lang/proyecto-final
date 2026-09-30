@@ -4,9 +4,7 @@
 (function () {
   'use strict';
 
-  var API_BASE = new URLSearchParams(location.search).get('api') ||
-                 window.REFRI_API ||
-                 window.location.origin;
+  var API_BASE = window.REFRI_API || window.location.origin;
 
   var ENVIO = { costo: 25000, gratis_desde: 500000 };
   var estado = { metodo: 'tarjeta' };
@@ -334,7 +332,9 @@
           irConfirmacion(res.data.orden);
         } else if (res.status === 402) {
           setMsg('Pago rechazado: ' + (res.data.mensaje || 'La tarjeta fue rechazada.') +
-            ' La orden ' + res.data.orden + ' quedó registrada con estado pendiente.', 'error');
+            ' La orden ' + res.data.orden + ' fue cancelada y el stock volvió a estar disponible.', 'error');
+        } else if (res.status === 503) {
+          setMsg(res.data.detail || 'El pago con tarjeta no está disponible en este momento.', 'error');
         } else {
           setMsg(res.data.detail || 'No se pudo procesar el pago.', 'error');
         }
@@ -380,8 +380,30 @@
   var yearEl = $('#year');
   if (yearEl) yearEl.textContent = new Date().getFullYear();
 
+  /* ---------- Pago de PayPal cancelado por el cliente ---------- */
+  // Al volver de PayPal con ?cancelado=1 se avisa al backend para que libere
+  // el stock que la orden tenía reservado. Se valida con el token de
+  // aprobación, así que funciona aunque el usuario no tenga sesión abierta.
+  async function liberarPayPalCancelado() {
+    var qs = new URLSearchParams(window.location.search);
+    if (qs.get('cancelado') !== '1') return;
+    var orden = qs.get('orden') || '';
+    var token = qs.get('token') || '';
+    if (!orden || !token) return;
+    try {
+      await api('/api/tienda/pagos/paypal/cancelar/', {
+        method: 'POST',
+        body: JSON.stringify({ orden: orden, token: token }),
+      });
+    } catch (e) {
+      // Si no se pudo liberar, el stock sigue reservado y un supervisor puede
+      // cancelar la orden; no se interrumpe la navegación del cliente.
+    }
+  }
+
   /* ---------- Arranque ---------- */
   (async function init() {
+    await liberarPayPalCancelado();
     if (!getToken()) {
       try { localStorage.setItem('refri_checkout_return', '/checkout/'); } catch (e) { /* ok */ }
       toast('Debes iniciar sesión para continuar con la compra.', 'error');

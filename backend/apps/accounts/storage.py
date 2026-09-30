@@ -83,7 +83,16 @@ def _auth_headers(secret):
 
 
 class SupabaseStorageError(RuntimeError):
-    """Error al operar con Supabase Storage."""
+    """Error al operar con Supabase Storage.
+
+    ``status`` conserva el codigo HTTP que devolvio Supabase (``None`` si el
+    fallo fue de red o inesperado) para que la vista pueda informar la causa
+    real en lugar de un mensaje generico.
+    """
+
+    def __init__(self, message, status=None):
+        super().__init__(message)
+        self.status = status
 
 
 @deconstructible
@@ -168,7 +177,8 @@ class SupabaseStorage(Storage):
                 'Supabase respondió {} al subir la foto ({}).'.format(
                     exc.code,
                     getattr(exc, 'reason', exc),
-                )
+                ),
+                status=exc.code,
             ) from exc
         except urllib.error.URLError as exc:
             raise SupabaseStorageError(

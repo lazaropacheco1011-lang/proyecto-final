@@ -10,11 +10,11 @@
   /* ------------------------------------------------------------------
    * Configuración de la API
    * Por defecto apunta al backend local (Django runserver).
-   * Se puede sobreescribir con ?api=https://dominio en la URL.
+   * Solo se puede sobreescribir con window.REFRI_API definido por el
+   * servidor: el destino de la API no se toma de la URL porque ahí viajan
+   * los tokens de sesión.
    * ------------------------------------------------------------------ */
-  var API_BASE = new URLSearchParams(location.search).get('api') ||
-                 window.REFRI_API ||
-                 window.location.origin;
+  var API_BASE = window.REFRI_API || window.location.origin;
 
   var EMPRESA = {
     nombre: 'RefriMaster',

@@ -18,6 +18,8 @@ from apps.tienda.services import (
     cambiar_estado_orden,
     crear_orden_desde_carrito,
     enviar_correo_confirmacion_orden,
+    liberar_stock_orden,
+    rechazar_pago,
     registrar_pago,
 )
 
@@ -93,15 +95,24 @@ class TiendaConfigView(APIView):
     permission_classes = []
 
     def get(self, request):
+        disponibles = payments.metodos_disponibles()
+        etiquetas = {
+            PagoTienda.Metodo.TARJETA: 'Tarjeta de crédito/débito',
+            PagoTienda.Metodo.PAYPAL: 'PayPal',
+            PagoTienda.Metodo.BILLETERA: 'Billetera / app',
+        }
         data = {
             'moneda': settings.TIENDA_MONEDA,
             'costo_envio': settings.COSTO_ENVIO,
             'envio_gratis_desde': settings.ENVIO_GRATIS_MINIMO,
             'modo_pago': settings.PAYMENT_MODE,
+            'pagos_disponibles': disponibles,
+            # Solo se ofrecen los métodos que realmente pueden operarse ahora.
             'metodos': [
-                {'value': 'tarjeta', 'label': 'Tarjeta de crédito/débito'},
-                {'value': 'paypal', 'label': 'PayPal'},
-                {'value': 'billetera', 'label': 'Billetera / app'},
+                {'value': metodo, 'label': etiquetas[metodo]}
+                for metodo in (PagoTienda.Metodo.TARJETA, PagoTienda.Metodo.PAYPAL,
+                               PagoTienda.Metodo.BILLETERA)
+                if metodo in disponibles
             ],
         }
         # La tarjeta de prueba solo tiene sentido en modo sandbox; en producción
@@ -109,6 +120,17 @@ class TiendaConfigView(APIView):
         if settings.PAYMENT_MODE == 'sandbox':
             data['tarjetas_prueba'] = payments.CARD_APROBADA
         return Response(data)
+
+
+def _metodo_bloqueado(metodo):
+    """Respuesta 503 cuando el método no puede usarse en este entorno."""
+    disponible, motivo = payments.metodo_disponible(metodo)
+    if disponible:
+        return None
+    return Response(
+        {'detail': motivo, 'estado_pago': 'no_disponible'},
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
 
 
 class CrearOrdenTarjetaView(APIView):
@@ -119,6 +141,9 @@ class CrearOrdenTarjetaView(APIView):
     permission_classes = [IsAuthenticated, IsCliente]
 
     def post(self, request):
+        bloqueado = _metodo_bloqueado(PagoTienda.Metodo.TARJETA)
+        if bloqueado:
+            return bloqueado
         payload = request.data or {}
         datos = _datos_cliente(payload)
         carrito = _carrito(payload)
@@ -139,24 +164,39 @@ class CrearOrdenTarjetaView(APIView):
                 resultado = payments.authorize_card(
                     numero, exp_mes, exp_anio, cvv, orden.total, orden.moneda,
                 )
-                estado_pago = PagoTienda.Estado.APROBADO if resultado['aprobado'] else PagoTienda.Estado.RECHAZADO
-                registrar_pago(
-                    orden,
-                    metodo=PagoTienda.Metodo.TARJETA,
-                    estado=estado_pago,
-                    referencia=resultado['referencia'],
-                    ultimos_digitos=resultado['ultimos_digitos'],
-                    marca_tarjeta=resultado['marca'],
-                    detalle={'motivo': resultado['motivo'], 'mensaje': resultado['mensaje']},
-                )
-                if resultado['aprobado'] and orden.estado == Orden.Estado.PENDIENTE:
-                    orden.estado = Orden.Estado.CONFIRMADO
-                    orden.save(update_fields=['estado', 'updated_at'])
+                if resultado['aprobado']:
+                    registrar_pago(
+                        orden,
+                        metodo=PagoTienda.Metodo.TARJETA,
+                        estado=PagoTienda.Estado.APROBADO,
+                        referencia=resultado['referencia'],
+                        ultimos_digitos=resultado['ultimos_digitos'],
+                        marca_tarjeta=resultado['marca'],
+                        detalle={'motivo': resultado['motivo'], 'mensaje': resultado['mensaje']},
+                    )
+                    if orden.estado == Orden.Estado.PENDIENTE:
+                        orden.estado = Orden.Estado.CONFIRMADO
+                        orden.save(update_fields=['estado', 'updated_at'])
+                else:
+                    # El cobro no se realizó: se registra el rechazo y se
+                    # devuelve al inventario el stock que la orden tenía
+                    # reservado, para no dejarlo retenido por un pago fallido.
+                    orden, _pago = rechazar_pago(
+                        orden, PagoTienda.Metodo.TARJETA,
+                        motivo=resultado['mensaje'],
+                        user=request.user,
+                        referencia=resultado['referencia'],
+                        ultimos_digitos=resultado['ultimos_digitos'],
+                        marca_tarjeta=resultado['marca'],
+                        detalle={'motivo': resultado['motivo'], 'mensaje': resultado['mensaje']},
+                    )
         except ValueError as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        estado_pago = PagoTienda.Estado.APROBADO if resultado['aprobado'] else PagoTienda.Estado.RECHAZADO
         payload_resp = {
             'orden': orden.numero,
+            'estado_orden': orden.estado,
             'estado_pago': estado_pago,
             'aprobado': resultado['aprobado'],
             'mensaje': resultado['mensaje'],
@@ -176,16 +216,25 @@ class CrearOrdenPayPalView(APIView):
     permission_classes = [IsAuthenticated, IsCliente]
 
     def post(self, request):
+        bloqueado = _metodo_bloqueado(PagoTienda.Metodo.PAYPAL)
+        if bloqueado:
+            return bloqueado
         payload = request.data or {}
         datos = _datos_cliente(payload)
         carrito = _carrito(payload)
+        orden = None
         try:
             with transaction.atomic():
                 orden = crear_orden_desde_carrito(carrito, datos, request)
                 base = request.build_absolute_uri('/checkout/paypal/aprobar/')
                 token_aprobacion = secrets.token_urlsafe(32)
                 aprobacion = f'{base}?orden={orden.numero}&token={token_aprobacion}'
-                cancel_url = request.build_absolute_uri('/checkout/?cancelado=1')
+                # Al volver de PayPal se repiten orden y token para que el
+                # cliente pueda liberar el stock reservado si cancela.
+                cancel_url = (
+                    f'{request.build_absolute_uri("/checkout/")}'
+                    f'?cancelado=1&orden={orden.numero}&token={token_aprobacion}'
+                )
                 referencia, url_aprobacion, error = payments.crear_pago_paypal(
                     orden.total, orden.moneda,
                     f'Orden {orden.numero} - RefriMaster',
@@ -204,13 +253,32 @@ class CrearOrdenPayPalView(APIView):
                     },
                 )
         except ValueError as e:
+            # Todo el bloque es atómico: si la orden de PayPal no se crea, la
+            # reversión deshace a la vez la orden y el stock que tenía
+            # reservado, así que no queda inventario retenido.
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({
             'orden': orden.numero,
+            'estado_orden': orden.estado,
             'aprobacion_url': url_aprobacion,
             'estado_pago': PagoTienda.Estado.PENDIENTE,
         }, status=status.HTTP_201_CREATED)
+
+
+def _pago_paypal_por_token(numero, token):
+    """Localiza el pago de PayPal validando su token de aprobación."""
+    numero = str(numero or '').strip()
+    token = str(token or '').strip()
+    pago = PagoTienda.objects.filter(
+        orden__numero=numero, metodo=PagoTienda.Metodo.PAYPAL,
+    ).order_by('-id').first()
+    if not pago:
+        return None
+    esperado = str((pago.detalle or {}).get('aprobacion_token') or '')
+    if not token or not esperado or not secrets.compare_digest(token, esperado):
+        return None
+    return pago
 
 
 class AprobarPayPalView(APIView):
@@ -221,32 +289,71 @@ class AprobarPayPalView(APIView):
         payload = request.data or {}
         numero = str(payload.get('orden') or '').strip()
         token = str(payload.get('token') or '').strip()
-        pago = PagoTienda.objects.filter(
-            orden__numero=numero, metodo=PagoTienda.Metodo.PAYPAL,
-        ).order_by('-id').first()
+        pago = _pago_paypal_por_token(numero, token)
         if not pago:
             return Response({'detail': 'Pago no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
         if pago.estado == PagoTienda.Estado.APROBADO:
             return Response({'orden': numero, 'estado_pago': pago.estado})
-        esperado = str((pago.detalle or {}).get('aprobacion_token') or '')
-        if not token or not esperado or not secrets.compare_digest(token, esperado):
-            return Response({'detail': 'Token de aprobación inválido.'}, status=status.HTTP_400_BAD_REQUEST)
+        if pago.estado in (PagoTienda.Estado.RECHAZADO, PagoTienda.Estado.REEMBOLSADO):
+            # El pago ya se procesó: no se vuelve a cobrar ni a tocar el stock.
+            return Response({'orden': numero, 'estado_pago': pago.estado})
 
         ok, motivo = payments.capturar_pago_paypal(pago.referencia)
+        orden = pago.orden
         if ok:
-            pago.estado = PagoTienda.Estado.APROBADO
-            pago.detalle = {'capturado': True, 'motivo': motivo}
-            pago.save(update_fields=['estado', 'detalle', 'updated_at'])
-            orden = pago.orden
-            if orden.estado == Orden.Estado.PENDIENTE:
-                orden.estado = Orden.Estado.CONFIRMADO
-                orden.save(update_fields=['estado', 'updated_at'])
+            with transaction.atomic():
+                pago.estado = PagoTienda.Estado.APROBADO
+                pago.detalle = {'capturado': True, 'motivo': motivo}
+                pago.save(update_fields=['estado', 'detalle', 'updated_at'])
+                if orden.estado == Orden.Estado.PENDIENTE:
+                    orden.estado = Orden.Estado.CONFIRMADO
+                    orden.save(update_fields=['estado', 'updated_at'])
             enviar_correo_confirmacion_orden(orden)
-            return Response({'orden': numero, 'estado_pago': pago.estado})
+            return Response({'orden': numero, 'estado_orden': orden.estado, 'estado_pago': pago.estado})
+
+        # La captura no se completó: no hay pago, así que el stock reservado se
+        # devuelve. Si la orden ya estaba cancelada no se vuelve a descontar ni a
+        # devolver nada.
+        with transaction.atomic():
+            if pago.estado == PagoTienda.Estado.PENDIENTE:
+                pago.estado = PagoTienda.Estado.RECHAZADO
+                pago.detalle = {'capturado': False, 'motivo': motivo}
+                pago.save(update_fields=['estado', 'detalle', 'updated_at'])
+                orden, _ = liberar_stock_orden(
+                    orden, 'No se pudo capturar el pago de PayPal.',
+                )
         return Response(
             {'detail': 'No se pudo capturar el pago en PayPal.'},
             status=status.HTTP_402_PAYMENT_REQUIRED,
         )
+
+
+class CancelarPagoPayPalView(APIView):
+    """Libera el stock reservado cuando el cliente abandona el pago de PayPal.
+
+    Se valida con el mismo token de aprobación, sin exigir sesión: PayPal
+    devuelve al cliente desde un flujo externo.
+    """
+    permission_classes = []
+
+    def post(self, request):
+        payload = request.data or {}
+        numero = str(payload.get('orden') or '').strip()
+        token = str(payload.get('token') or '').strip()
+        pago = _pago_paypal_por_token(numero, token)
+        if not pago:
+            return Response({'detail': 'Pago no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+        if pago.estado != PagoTienda.Estado.PENDIENTE:
+            return Response({'orden': numero, 'estado_pago': pago.estado})
+
+        with transaction.atomic():
+            pago.estado = PagoTienda.Estado.RECHAZADO
+            pago.detalle = {'capturado': False, 'motivo': 'cancelado'}
+            pago.save(update_fields=['estado', 'detalle', 'updated_at'])
+            orden, _ = liberar_stock_orden(
+                pago.orden, 'Pago de PayPal cancelado por el cliente.',
+            )
+        return Response({'orden': numero, 'estado_orden': orden.estado, 'estado_pago': pago.estado})
 
 
 class CrearOrdenBilleteraView(APIView):
@@ -258,6 +365,9 @@ class CrearOrdenBilleteraView(APIView):
     permission_classes = [IsAuthenticated, IsCliente]
 
     def post(self, request):
+        bloqueado = _metodo_bloqueado(PagoTienda.Metodo.BILLETERA)
+        if bloqueado:
+            return bloqueado
         payload = request.data or {}
         datos = _datos_cliente(payload)
         carrito = _carrito(payload)
@@ -274,22 +384,41 @@ class CrearOrdenBilleteraView(APIView):
         except ValueError as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+        # El pedido queda PENDIENTE: el stock permanece reservado a la espera
+        # del pago, nunca se da por cobrado. Se libera si la orden se cancela.
         enviar_correo_confirmacion_orden(orden)
         return Response({
             'orden': orden.numero,
+            'estado_orden': orden.estado,
             'estado_pago': PagoTienda.Estado.PENDIENTE,
             'mensaje': 'Pedido registrado. Coordinaremos el pago desde tu billetera.',
         }, status=status.HTTP_201_CREATED)
 
 
 class OrdenPublicaDetailView(APIView):
-    """Detalle público de una orden por número (confirmación)."""
-    permission_classes = []
+    """Detalle de una orden para quien la posee.
+
+    El número de orden es correlativo y predecible (ORD-0001, ORD-0002, ...),
+    por lo que consultarlo sin autenticación permite a cualquiera ver los pedidos
+    de otros clientes. Se exige sesión y que la orden pertenezca al usuario (o
+    al personal autorizado, que ya tiene su propio recurso de gestión).
+    """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, numero):
-        try:
-            orden = Orden.objects.prefetch_related('items', 'pagos').get(numero=numero)
-        except Orden.DoesNotExist:
+        orden = (
+            Orden.objects
+            .filter(numero=numero)
+            .prefetch_related('items', 'pagos')
+            .first()
+        )
+        if not orden:
+            return Response({'detail': 'Orden no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        if orden.usuario_id != request.user.pk and not has_role(
+            request.user, ADMIN, SUPERVISOR, ALMACEN,
+        ):
+            # Misma respuesta que si no existiera, para no confirmar la
+            # existencia de pedidos ajenos.
             return Response({'detail': 'Orden no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
         return Response(OrdenPublicaSerializer(orden).data)
 
@@ -323,7 +452,12 @@ class OrdenViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reembolsar(self, request, pk=None):
-        """Marca el último pago aprobado de la orden como reembolsado."""
+        """Reembolsa el último pago aprobado de la orden.
+
+        El reembolso solo se marca localmente en sandbox. En producción se
+        rechaza: sin integración de reembolso, marcar el pago como reembolsado
+        dejaría constancia de una devolución que nunca ocurrió.
+        """
         if not has_role(request.user, ADMIN, SUPERVISOR):
             raise PermissionDenied('Solo administradores o supervisores pueden reembolsar pagos.')
         orden = self.get_object()
@@ -332,8 +466,15 @@ class OrdenViewSet(viewsets.ReadOnlyModelViewSet):
             raise ValidationError('La orden no tiene pagos registrados.')
         if pago.estado != PagoTienda.Estado.APROBADO:
             raise ValidationError('Solo se pueden reembolsar pagos aprobados.')
-        pago.estado = PagoTienda.Estado.REEMBOLSADO
-        pago.save(update_fields=['estado', 'updated_at'])
+
+        ok, mensaje = payments.reembolsar_pago(pago)
+        if not ok:
+            raise ValidationError(mensaje)
+
+        with transaction.atomic():
+            pago.estado = PagoTienda.Estado.REEMBOLSADO
+            pago.detalle = {**(pago.detalle or {}), 'reembolsado': True}
+            pago.save(update_fields=['estado', 'detalle', 'updated_at'])
         return Response({'orden': orden.numero, 'estado_pago': pago.estado})
 
 

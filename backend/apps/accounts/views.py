@@ -358,9 +358,25 @@ class MeView(viewsets.GenericViewSet):
             saved = storage.save(new_name, archivo)
         except SupabaseStorageError as exc:
             logger.error('No se pudo subir la foto de %s: %s', user.username, exc)
+            # Se informa la causa real (codigo HTTP del almacenamiento) en vez
+            # de un mensaje generico: asi el usuario sabe si debe revisar su
+            # conexion o es la configuracion del servidor de imagenes.
+            if exc.status is not None:
+                detalle = (
+                    'El servidor de imágenes rechazó la foto (código {}). '
+                    'No es un problema de tu conexión: contacta al administrador.'
+                ).format(exc.status)
+            else:
+                detalle = (
+                    'No se pudo contactar con el servidor de imágenes. '
+                    'Intenta de nuevo en unos segundos.'
+                )
             return Response(
-                {'error': 'No se pudo guardar la foto en el servidor. '
-                          'Verifica tu conexión e intenta de nuevo.'},
+                {
+                    'error': 'No se pudo guardar la foto en el servidor. '
+                             'Verifica tu conexión e intenta de nuevo.',
+                    'detalle': detalle,
+                },
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
