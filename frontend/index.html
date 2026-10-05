@@ -726,7 +726,12 @@
             </div>
             <div>
               <label class="field-label" for="loginPass">Contraseña</label>
-              <input id="loginPass" class="input" type="password" placeholder="••••••••" autocomplete="current-password" required>
+              <div class="relative">
+                <input id="loginPass" class="input input-with-toggle" type="password" placeholder="••••••••" autocomplete="current-password" required>
+                <button type="button" data-password-toggle="loginPass" class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-surface-variant" aria-label="Mostrar contraseña" aria-pressed="false">
+                  <span class="material-symbols-outlined" data-password-icon>visibility</span>
+                </button>
+              </div>
             </div>
             <button id="loginBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Iniciar Sesión</button>
           </form>
@@ -824,7 +829,12 @@
             </div>
             <div>
               <label class="field-label" for="regPass">Contraseña</label>
-              <input id="regPass" class="input" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+              <div class="relative">
+                <input id="regPass" class="input input-with-toggle" type="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" required>
+                <button type="button" data-password-toggle="regPass" class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-surface-variant" aria-label="Mostrar contraseña" aria-pressed="false">
+                  <span class="material-symbols-outlined" data-password-icon>visibility</span>
+                </button>
+              </div>
               <p class="mt-1.5 text-xs text-slate-500">Mínimo 8 caracteres. Evita contraseñas solo numéricas o muy comunes.</p>
             </div>
             <button id="registerBtn" type="submit" class="w-full rounded-xl bg-primary py-3 font-headline-md font-bold text-white transition-colors hover:bg-primary-hover">Crear Cuenta</button>

@@ -77,6 +77,10 @@ body {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.input-with-toggle {
+  padding-right: 2.75rem;
+}
+
 .input:focus {
   border-color: #0284c7;
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);

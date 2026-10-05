@@ -1,19 +1,23 @@
 """Vistas del Almacén: vitrina pública de productos + gestión interna."""
-from django.conf import settings
-from django.core.files.storage import default_storage
+import logging
+import uuid
+
 from django.db.models import Count, Q
 from django.utils.text import get_valid_filename
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import SAFE_METHODS, BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.storage import SupabaseStorageError, get_productos_storage
 from apps.almacen.models import Categoria, Producto
 from apps.almacen.serializers import CategoriaSerializer, ProductoSerializer
 from apps.core.permissions import ADMIN, ALMACEN, has_role
 from apps.core.services import delete_or_conflict, register_audit, reject_if
+
+logger = logging.getLogger(__name__)
 
 
 # Extensiones por tipo de imagen REAL detectado por firma binaria: no se
@@ -55,11 +59,15 @@ class AlmacenPermission(BasePermission):
 
 
 class ProductoImagenUploadView(APIView):
-    """Sube una imagen de producto al directorio MEDIA (``/media/productos/``).
+    """Sube una imagen de producto al bucket ``productos`` de Supabase Storage.
 
     El panel (admin-dashboard) la usa desde "Editar Producto" para elegir la
-    imagen desde el equipo sin digitar rutas. Devuelve la URL media lista
-    para guardarse en ``Producto.imagen``.
+    imagen desde el equipo sin digitar rutas. Devuelve la URL pública absoluta
+    del objeto en Supabase, lista para guardarse en ``Producto.imagen``.
+
+    Sin ``SUPABASE_URL``/``SUPABASE_SECRET_KEY`` el storage degrada a
+    ``FileSystemStorage`` (``MEDIA_ROOT``/``MEDIA_URL``) y devuelve ``/media/...``,
+    igual que antes de este cambio.
     """
     permission_classes = [AlmacenPermission]
     parser_classes = [MultiPartParser, FormParser]
@@ -102,16 +110,38 @@ class ProductoImagenUploadView(APIView):
                     {'error': 'El archivo no es una imagen válida.'}, status=400,
                 )
 
+        # Nombre único con uuid: evita que dos productos distintos terminen
+        # sobrescribiendo el mismo objeto del bucket, ya que la subida usa
+        # x-upsert. La extensión la fija el tipo real detectado por magic bytes.
         nombre = get_valid_filename(archivo.name or 'imagen')
         ext = IMAGEN_CONTENT_TYPES[mime]
         if not nombre.lower().endswith(ext):
             nombre = nombre + ext
+        nombre = '{}_{}'.format(uuid.uuid4().hex, nombre)
 
-        ruta_guardada = default_storage.save('productos/' + nombre, archivo)
-        url = settings.MEDIA_URL + ruta_guardada
+        storage = get_productos_storage()
+        try:
+            ruta_guardada = storage.save('productos/' + nombre, archivo)
+        except SupabaseStorageError as exc:
+            logger.error('No se pudo subir la imagen del producto: %s', exc)
+            return Response(
+                {
+                    'error': 'No se pudo guardar la imagen en el servidor. '
+                             'Verifica tu conexión e intenta de nuevo.',
+                    'detalle': (
+                        'El servidor de imágenes rechazó el archivo (código {}). '
+                        'No es un problema de tu conexión: contacta al administrador.'
+                    ).format(exc.status) if exc.status is not None else (
+                        'No se pudo contactar con el servidor de imágenes. '
+                        'Intenta de nuevo en unos segundos.'
+                    ),
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
         return Response({
-            'imagen': url,
-            'url': url,
+            'imagen': storage.url(ruta_guardada),
+            'url': storage.url(ruta_guardada),
             'nombre': ruta_guardada.split('/')[-1],
         })
 

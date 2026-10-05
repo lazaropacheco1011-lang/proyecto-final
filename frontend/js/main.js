@@ -170,6 +170,19 @@
 
   RefriSession.init();
 
+  $$('[data-password-toggle]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var input = document.getElementById(btn.getAttribute('data-password-toggle'));
+      if (!input) return;
+      var visible = input.type === 'text';
+      input.type = visible ? 'password' : 'text';
+      var icon = btn.querySelector('[data-password-icon]');
+      if (icon) icon.textContent = visible ? 'visibility' : 'visibility_off';
+      btn.setAttribute('aria-label', visible ? 'Mostrar contraseña' : 'Ocultar contraseña');
+      btn.setAttribute('aria-pressed', visible ? 'false' : 'true');
+    });
+  });
+
   /* ---------- Login ---------- */
   var loginForm = $('#loginForm');
   if (loginForm) loginForm.addEventListener('submit', async function (e) {

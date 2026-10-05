@@ -127,6 +127,7 @@ ASGI_APPLICATION = 'config.asgi.application'
 # Base de datos (SQLite por defecto, lista para PostgreSQL)
 # ---------------------------------------------------------------------------
 DATABASE_ENGINE = os.getenv('DB_ENGINE', 'sqlite').lower()
+DB_SSLMODE = os.getenv('DB_SSLMODE', '').strip()
 
 if DATABASE_ENGINE == 'postgres':
     DATABASES = {
@@ -137,6 +138,7 @@ if DATABASE_ENGINE == 'postgres':
             'PASSWORD': os.getenv('DB_PASSWORD', ''),
             'HOST': os.getenv('DB_HOST', 'localhost'),
             'PORT': os.getenv('DB_PORT', '5432'),
+            'OPTIONS': {'sslmode': DB_SSLMODE} if DB_SSLMODE else {},
         }
     }
 else:

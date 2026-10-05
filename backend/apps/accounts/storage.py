@@ -1,7 +1,13 @@
-"""Almacenamiento de fotos de perfil en Supabase Storage.
+"""Almacenamiento de imágenes en Supabase Storage.
 
-Se aplica ÚNICAMENTE al campo ``accounts.User.photo``. El resto del proyecto
-(productos, evidencias, firmas y ``default_storage``) sigue usando
+``SupabaseStorage`` es un backend parametrizable por bucket. Se usa en dos
+lugares, cada uno con su bucket y sin compartir estado:
+
+- ``accounts.User.photo`` -> bucket ``fotos-perfil`` (``SupabaseStorage()``).
+- ``apps.almacen.views.ProductoImagenUploadView`` -> bucket ``productos``
+  (``get_productos_storage()``).
+
+El resto del proyecto (evidencias, firmas y ``default_storage``) sigue usando
 ``FileSystemStorage`` con ``MEDIA_ROOT``/``MEDIA_URL``; aquí no se cambia
 ningún almacenamiento global.
 
@@ -34,9 +40,18 @@ from django.utils.deconstruct import deconstructible
 logger = logging.getLogger(__name__)
 
 BUCKET = 'fotos-perfil'
+# Bucket de las imágenes de producto subidas desde el panel.
+BUCKET_PRODUCTOS = 'productos'
 DEFAULT_TIMEOUT = 15
 # Columna accounts_user.photo (ImageField sin max_length propio): varchar(100).
 COLUMN_MAX_LENGTH = 100
+# Suelo del presupuesto de nombre: siempre debe caber "productos/" + uuid + ext.
+MIN_NAME_MAX_LENGTH = 64
+# Pasadas de ajuste del nombre y suelo al recortar el nombre base.
+_MAX_LENGTH_PASSES = 12
+_MIN_NAME_BUDGET = 48
+# Columna almacen_producto.imagen (CharField max_length=300).
+COLUMN_MAX_LENGTH_PRODUCTOS = 300
 _SUPABASE_URL_ENV = 'SUPABASE_URL'
 _SUPABASE_SECRET_ENV = 'SUPABASE_SECRET_KEY'
 
@@ -99,9 +114,16 @@ class SupabaseStorageError(RuntimeError):
 class SupabaseStorage(Storage):
     """Storage para el bucket ``fotos-perfil`` de Supabase (fotos de perfil)."""
 
-    def __init__(self, bucket=None, timeout=None):
+    def __init__(self, bucket=None, timeout=None, column_max_length=None, store_url=False):
         self.bucket = bucket or BUCKET
         self.timeout = timeout if timeout is not None else DEFAULT_TIMEOUT
+        self.column_max_length = (
+            column_max_length if column_max_length is not None else COLUMN_MAX_LENGTH
+        )
+        # True cuando lo que se guarda en la columna es la URL publica y no el
+        # nombre del objeto (almacen_producto.imagen). Es lo que obliga a medir
+        # la URL ya percent-codificada, y no el nombre crudo.
+        self.store_url = bool(store_url)
         if self._config() is None:
             # Degradación a almacenamiento local (dev): mismo MEDIA_ROOT/MEDIA_URL.
             self._local_fs = FileSystemStorage(
@@ -232,14 +254,36 @@ class SupabaseStorage(Storage):
             return self._local_fs.url(name)
         return self._endpoint('public', name)
 
+    def _stored_value(self, name):
+        """Valor que realmente queda escrito en la columna de la base de datos."""
+        if self.store_url:
+            return self.url(name)
+        return name
+
     def get_available_name(self, name, max_length=None):
-        # La columna accounts_user.photo es varchar(100) (ImageField sin
-        # max_length propio): se recorta solo el nombre base hasta caber,
-        # conservando el directorio, el uuid (único) y la extensión.
-        limite = max_length if max_length is not None else COLUMN_MAX_LENGTH
-        name = _adjust_name_length(self._norm(name), limite)
+        # accounts_user.photo es varchar(100) (ImageField sin max_length propio)
+        # y almacen_producto.imagen es varchar(300): el limite por defecto
+        # depende del campo, y el cropping conserva el directorio, el
+        # uuid (único) y la extensión.
+        limite = max_length if max_length is not None else self.column_max_length
+        name = self._norm(name)
         if self._local_fs is not None:
-            return self._local_fs.get_available_name(name, max_length=max_length)
+            return self._local_fs.get_available_name(name, max_length=limite)
+        name = _adjust_name_length(name, limite)
+        # Si lo que se guarda es la URL, el nombre debe recortarse contra la
+        # longitud de la URL ya percent-codificada: un espacio, por ejemplo,
+        # ocupa 3 caracteres como %20. Sin este ajuste, un nombre con espacios
+        #largos desbordaría la columna pese a caber en el recorte inicial.
+        for _ in range(_MAX_LENGTH_PASSES):
+            valor = self._stored_value(name)
+            if len(valor) <= limite:
+                break
+            siguiente = _adjust_name_length(
+                name, max(_MIN_NAME_BUDGET, len(name) - (len(valor) - limite)),
+            )
+            if siguiente == name:
+                break
+            name = siguiente
         # El nombre ya incluye uuid (único) y la subida usa x-upsert: devolverlo
         # tal cual evita llamadas HEAD adicionales por cada subida.
         return name
@@ -281,3 +325,35 @@ class SupabaseStorage(Storage):
                     type(exc).__name__, exc
                 )
             ) from exc
+
+
+# --------------------------------------------------------------------------- #
+# Instancias por bucket
+# --------------------------------------------------------------------------- #
+def get_fotos_perfil_storage():
+    """Storage del bucket ``fotos-perfil`` (campo ``accounts.User.photo``).
+
+    Se crea por llamada (y no como constante de módulo) para que la degradación a
+    ``FileSystemStorage`` se evalúe con el entorno ya carregado, igual que hace
+    ``StorageField`` al deconstructar el storage.
+    """
+    return SupabaseStorage(bucket=BUCKET)
+
+
+def get_productos_storage():
+    """Storage del bucket ``productos`` (imágenes de productos del panel).
+
+    Instancia de storage que escribe en el bucket ``productos``; la usa
+    ``ProductoImagenUploadView`` para guardar las imágenes subidas desde el
+    panel.
+
+    A diferencia de ``photo``, lo que se guarda en ``almacen_producto.imagen``
+    (varchar 300) es la URL absoluta y no el nombre del objeto: por eso
+    ``store_url=True`` hace que el recorte del nombre mida la URL pública ya
+    percent-codificada, y no el nombre crudo.
+    """
+    return SupabaseStorage(
+        bucket=BUCKET_PRODUCTOS,
+        column_max_length=COLUMN_MAX_LENGTH_PRODUCTOS,
+        store_url=True,
+    )

@@ -2491,7 +2491,7 @@
         hint: 'Solo se usa si "Producto en oferta" está activado. Vacío = sin oferta.' },
       { name: 'stock', label: 'Stock (unidades)', type: 'number', required: true, min: 0, value: item ? item.stock : 0 },
       { name: 'imagen', label: 'Imagen del producto', type: 'image', span: 2, value: item ? item.imagen : '',
-        hint: 'Selecciona una imagen desde tu computadora. Se guarda en /media/productos/.' },
+        hint: 'Selecciona una imagen desde tu computadora. Se guarda en Supabase Storage (bucket productos).' },
       { name: 'descripcion', label: 'Descripción', type: 'textarea', span: 2, value: item ? item.descripcion : '' },
       { name: 'estado', label: 'Estado', type: 'select', value: item ? (item.disponible ? 'disponible' : 'agotado') : 'disponible',
         options: [{ value: 'disponible', label: 'Disponible' }, { value: 'agotado', label: 'Agotado' }],
