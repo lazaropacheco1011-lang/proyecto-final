@@ -81,9 +81,14 @@
 
     var itemsBox = $('#cartItems');
     var summaryBox = $('#cartSummary');
+    var itemsCol = $('#cartItemsCol');
 
     if (!items.length) {
-      itemsBox.innerHTML = '<div class="flex flex-col items-center justify-center rounded-3xl border border-dashed border-outline bg-white py-20 text-center">' +
+      if (itemsCol) {
+        itemsCol.classList.remove('lg:col-span-2');
+        itemsCol.classList.add('lg:col-span-3');
+      }
+      itemsBox.innerHTML = '<div class="mx-auto flex w-full max-w-2xl flex-col items-center justify-center rounded-3xl border border-dashed border-outline bg-white py-20 text-center">' +
         '<span class="material-symbols-outlined text-6xl text-slate-400">shopping_cart</span>' +
         '<h2 class="mt-4 font-headline-md text-headline-md font-bold text-on-surface">Tu carrito está vacío</h2>' +
         '<p class="mt-2 max-w-sm text-sm text-on-surface-variant">Explora el almacén y agrega productos de refrigeración para comenzar tu pedido.</p>' +
@@ -92,6 +97,11 @@
       '</div>';
       summaryBox.innerHTML = '';
       return;
+    }
+
+    if (itemsCol) {
+      itemsCol.classList.remove('lg:col-span-3');
+      itemsCol.classList.add('lg:col-span-2');
     }
 
     itemsBox.innerHTML = '<div class="space-y-4">' +
