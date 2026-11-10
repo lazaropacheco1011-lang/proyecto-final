@@ -5,6 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import SAFE_METHODS
 from rest_framework.response import Response
 
+from apps.accounts.models import Tecnico
 from apps.core.permissions import CLIENTE, SUPERVISOR, TECNICO, get_supervisor_tecnico_ids, has_role, is_admin, is_supervisor
 from apps.core.services import log_state_change, register_audit
 from apps.instalaciones.models import Instalacion, InstalacionEstadoLog
@@ -222,6 +223,25 @@ class InstalacionViewSet(viewsets.ModelViewSet):
         tecnico = request.query_params.get('tecnico')
         duracion = request.query_params.get('duracion_minutos')
         excluir = request.query_params.get('instalacion')
+        if is_supervisor(request.user):
+            if not tecnico:
+                return Response(
+                    {'detail': 'Debes indicar un técnico de tu equipo.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            try:
+                tecnico_id = int(tecnico)
+            except (TypeError, ValueError):
+                return Response(
+                    {'detail': 'El técnico indicado no es válido.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if not Tecnico.objects.filter(
+                pk=tecnico_id,
+                user_id__in=get_supervisor_tecnico_ids(request.user),
+            ).exists():
+                raise PermissionDenied('Solo puedes consultar la disponibilidad de técnicos de tu equipo.')
+            tecnico = tecnico_id
         try:
             slots = sugerir_horarios(
                 fecha=fecha,

@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from rest_framework import serializers
 
+from apps.core.permissions import TECNICO, has_role, tecnico_pertenece_a_supervisor
 from apps.instalaciones.models import Instalacion, InstalacionEstadoLog, MaterialInstalacion
 from apps.instalaciones.services import finalizar_instalacion
 
@@ -113,8 +114,22 @@ class InstalacionSerializer(serializers.ModelSerializer):
         return None
 
     def validate(self, attrs):
+        user = getattr(self.context.get('request'), 'user', None)
+        if has_role(user, TECNICO) and self.instance:
+            changed = [
+                field for field in ('cliente', 'equipo', 'solicitud', 'tecnico')
+                if field in attrs and getattr(self.instance, f'{field}_id') != getattr(attrs[field], 'pk', None)
+            ]
+            if changed:
+                raise serializers.ValidationError({
+                    field: 'Los técnicos no pueden cambiar las relaciones de esta instalación.'
+                    for field in changed
+                })
+
         estado = attrs.get('estado', getattr(self.instance, 'estado', None))
         tecnico = attrs.get('tecnico', getattr(self.instance, 'tecnico', None))
+        if not tecnico_pertenece_a_supervisor(user, tecnico):
+            raise serializers.ValidationError({'tecnico': 'Solo puedes asignar técnicos de tu equipo.'})
         fecha = attrs.get('fecha_programada', getattr(self.instance, 'fecha_programada', None))
 
         # RN-01: Toda instalación debe estar asociada a un cliente.

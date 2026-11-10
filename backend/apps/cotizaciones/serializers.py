@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.cotizaciones.models import Cotizacion, CotizacionDetalle
+from apps.core.permissions import tecnico_pertenece_a_supervisor
 
 
 class CotizacionDetalleSerializer(serializers.ModelSerializer):
@@ -16,6 +17,14 @@ class CotizacionSerializer(serializers.ModelSerializer):
     solicitud_numero = serializers.IntegerField(source='solicitud.id', read_only=True)
     estado_display = serializers.CharField(source='get_estado_display', read_only=True)
     detalles = CotizacionDetalleSerializer(many=True)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        user = getattr(self.context.get('request'), 'user', None)
+        tecnico = attrs.get('tecnico', getattr(self.instance, 'tecnico', None))
+        if not tecnico_pertenece_a_supervisor(user, tecnico):
+            raise serializers.ValidationError({'tecnico': 'Solo puedes asignar técnicos de tu equipo.'})
+        return attrs
 
     class Meta:
         model = Cotizacion

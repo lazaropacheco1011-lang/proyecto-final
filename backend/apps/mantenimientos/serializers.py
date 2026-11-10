@@ -3,7 +3,7 @@ from decimal import Decimal
 from rest_framework import serializers
 
 from apps.clientes.models import Cliente
-from apps.core.permissions import CLIENTE, has_role
+from apps.core.permissions import CLIENTE, has_role, tecnico_pertenece_a_supervisor
 from apps.mantenimientos.models import Mantenimiento
 
 
@@ -59,4 +59,7 @@ class MantenimientoSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'equipo': 'El equipo no pertenece al cliente indicado.'}
             )
+        tecnico = attrs.get('tecnico', getattr(self.instance, 'tecnico', None))
+        if not tecnico_pertenece_a_supervisor(user, tecnico):
+            raise serializers.ValidationError({'tecnico': 'Solo puedes asignar técnicos de tu equipo.'})
         return attrs

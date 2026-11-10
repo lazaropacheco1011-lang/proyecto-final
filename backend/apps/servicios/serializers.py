@@ -5,7 +5,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import Tecnico
 from apps.clientes.models import Cliente
-from apps.core.permissions import CLIENTE, has_role
+from apps.core.permissions import CLIENTE, has_role, tecnico_pertenece_a_supervisor
 from apps.materiales.services import descontar_inventario, reponer_inventario
 from apps.servicios.models import (
     EstadoOrdenLog,
@@ -141,6 +141,14 @@ class VisitaTecnicaSerializer(serializers.ModelSerializer):
         queryset=Tecnico.objects.all(), required=False, allow_null=True
     )
 
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        user = getattr(self.context.get('request'), 'user', None)
+        tecnico = attrs.get('tecnico', getattr(self.instance, 'tecnico', None))
+        if not tecnico_pertenece_a_supervisor(user, tecnico):
+            raise serializers.ValidationError({'tecnico': 'Solo puedes asignar técnicos de tu equipo.'})
+        return attrs
+
     class Meta:
         model = VisitaTecnica
         fields = [
@@ -251,6 +259,8 @@ class OrdenServicioSerializer(serializers.ModelSerializer):
 
         estado = attrs.get('estado', getattr(self.instance, 'estado', None) if self.instance else None)
         tecnico = attrs.get('tecnico', getattr(self.instance, 'tecnico', None) if self.instance else None)
+        if not tecnico_pertenece_a_supervisor(user, tecnico):
+            raise serializers.ValidationError({'tecnico': 'Solo puedes asignar técnicos de tu equipo.'})
         prev_estado = getattr(self.instance, 'estado', None) if self.instance else None
 
         # RN-02: Toda orden debe tener técnico asignado antes de iniciar.

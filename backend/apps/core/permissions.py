@@ -35,6 +35,13 @@ def get_supervisor_tecnico_ids(user):
     return list(perfil.tecnicos.values_list('user_id', flat=True))
 
 
+def tecnico_pertenece_a_supervisor(user, tecnico):
+    """Comprueba la pertenencia a equipo al asignar técnicos desde un supervisor."""
+    if not is_supervisor(user) or tecnico is None:
+        return True
+    return tecnico.user_id in get_supervisor_tecnico_ids(user)
+
+
 class IsAdmin(BasePermission):
     message = 'Solo los administradores pueden realizar esta acción.'
 

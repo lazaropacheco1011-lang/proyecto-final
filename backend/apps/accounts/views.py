@@ -498,7 +498,7 @@ class TecnicoViewSet(viewsets.ModelViewSet):
         if has_role(user, TECNICO):
             return qs.filter(user=user)
         if has_role(user, SUPERVISOR):
-            return qs
+            return qs.filter(supervisor__user=user)
         return qs
 
     def perform_create(self, serializer):

@@ -446,6 +446,935 @@
   /* ------------------------------------------------------------------
    * Formularios
    * ------------------------------------------------------------------ */
+  function normalizeText(value) {
+    return String(value == null ? '' : value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
+  function productoLabel(p) {
+    return [p && p.nombre, p && p.categoria_nombre]
+      .filter(Boolean).join(' · ').slice(0, 150);
+  }
+
+  function initProductoPicker(root, productos, errorMessage) {
+    if (!root) return;
+    var input = root.querySelector('[data-ps-input]');
+    if (!input) return;
+    var wrap = input.closest('[data-ps-root]');
+    if (!wrap) return;
+    var results = wrap.querySelector('[data-ps-results]');
+    var clearBtn = wrap.querySelector('[data-ps-clear]');
+    var status = wrap.querySelector('[data-ps-status]');
+    if (!results) return;
+    var lista = productos || [];
+    var visibles = [];
+    var activeIndex = -1;
+
+    function syncClear() {
+      if (clearBtn) clearBtn.classList.toggle('hidden', !input.value.trim());
+    }
+
+    function matchProducto() {
+      var value = input.value.trim();
+      if (!value) return null;
+      return lista.find(function (p) { return productoLabel(p) === value; }) || null;
+    }
+
+    function updateStatus() {
+      if (!status) return;
+      var match = matchProducto();
+      if (match) {
+        status.innerHTML = '<span class="font-medium text-success">Producto seleccionado</span>' +
+          (match.categoria_nombre ? ' · ' + esc(match.categoria_nombre) : '');
+      } else if (input.value.trim()) {
+        status.innerHTML = '<span class="font-medium">Valor personalizado</span> · se guardará tal como está escrito.';
+      } else {
+        status.textContent = 'Opcional. Busca por nombre o categoría.';
+      }
+      syncClear();
+    }
+
+    function renderList(query) {
+      activeIndex = -1;
+      if (errorMessage) {
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-error">' + esc(errorMessage) + '</div>';
+        results.classList.remove('hidden');
+        return;
+      }
+      var q = normalizeText(query);
+      visibles = !q ? lista.slice() : lista.filter(function (p) {
+        return normalizeText(p.nombre).indexOf(q) >= 0 ||
+               normalizeText(p.categoria_nombre).indexOf(q) >= 0;
+      });
+      if (!visibles.length) {
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-on-surface-variant">' +
+          'No se encontraron productos</div>';
+      } else {
+        results.innerHTML = visibles.map(function (p, index) {
+          var selected = productoLabel(p) === input.value.trim();
+          return '<button type="button" role="option" data-ps-index="' + index + '" ' +
+            'class="flex w-full items-start gap-2 border-b border-outline-variant px-3 py-2 text-left last:border-0 hover:bg-surface-dim focus:bg-surface-dim focus:outline-none">' +
+            '<span class="material-symbols-outlined mt-0.5 text-base text-primary">inventory_2</span>' +
+            '<span class="min-w-0 flex-1">' +
+              '<span class="block truncate text-sm font-medium text-on-surface">' + esc(p.nombre || '') + '</span>' +
+              '<span class="block truncate text-xs text-on-surface-variant">' +
+                esc(p.categoria_nombre || 'Sin categoría') +
+                (p.stock != null ? ' · Stock: ' + esc(p.stock) : '') +
+              '</span>' +
+            '</span>' +
+            (selected ? '<span class="material-symbols-outlined text-base text-success">check</span>' : '') +
+          '</button>';
+        }).join('');
+      }
+      results.classList.remove('hidden');
+    }
+
+    input.addEventListener('focus', function () { renderList(''); });
+    input.addEventListener('input', function () { updateStatus(); renderList(input.value); });
+    input.addEventListener('blur', function () {
+      setTimeout(function () { results.classList.add('hidden'); }, 180);
+    });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { results.classList.add('hidden'); return; }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
+      if (results.classList.contains('hidden')) renderList(input.value);
+      var items = results.querySelectorAll('[data-ps-index]');
+      if (!items.length) return;
+      if (e.key === 'Enter') {
+        if (activeIndex < 0) return;
+        e.preventDefault();
+        items[activeIndex].click();
+        return;
+      }
+      e.preventDefault();
+      activeIndex = e.key === 'ArrowDown'
+        ? Math.min(activeIndex + 1, items.length - 1)
+        : Math.max(activeIndex - 1, 0);
+      for (var i = 0; i < items.length; i++) {
+        items[i].classList.toggle('bg-surface-dim', i === activeIndex);
+      }
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    });
+
+    results.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    results.addEventListener('click', function (e) {
+      var option = e.target.closest('[data-ps-index]');
+      if (!option) return;
+      var producto = visibles[Number(option.getAttribute('data-ps-index'))];
+      if (!producto) return;
+      input.value = productoLabel(producto);
+      updateStatus();
+      results.classList.add('hidden');
+    });
+    if (clearBtn) {
+      clearBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      clearBtn.addEventListener('click', function () {
+        input.value = '';
+        updateStatus();
+        renderList('');
+        input.focus();
+      });
+    }
+    updateStatus();
+  }
+
+  /* ------------------------------------------------------------------
+   * Buscador de equipos del Cliente
+   * Los equipos son registros propios del Cliente (/api/equipos/): el
+   * valor enviado sigue siendo el id de la FK, no un producto de Almacén.
+   * ------------------------------------------------------------------ */
+  function equiposSearchText(e) {
+    return normalizeText([e && e.tipo_nombre, e && e.marca, e && e.modelo,
+      e && e.numero_serie, e && e.capacidad, e && e.refrigerante]
+      .filter(Boolean).join(' '));
+  }
+
+  function equipoLabel(e) {
+    return [e && e.tipo_nombre, e && e.marca, e && e.modelo, e && e.numero_serie]
+      .filter(Boolean).join(' · ');
+  }
+
+  function initEquipoPicker(root, equipos, errorMessage) {
+    if (!root) return;
+    var wrap = root.querySelector('[data-eq-root]');
+    if (!wrap) return;
+    var search = wrap.querySelector('[data-eq-search]');
+    var hidden = wrap.querySelector('[data-eq-value]');
+    var results = wrap.querySelector('[data-eq-results]');
+    var clearBtn = wrap.querySelector('[data-eq-clear]');
+    var status = wrap.querySelector('[data-eq-status]');
+    if (!search || !hidden || !results) return;
+    var lista = equipos || [];
+    var visibles = [];
+    var activeIndex = -1;
+    var required = wrap.getAttribute('data-eq-required') === '1';
+
+    function findById(id) {
+      if (id === '' || id == null) return null;
+      return lista.find(function (e) { return String(e.id) === String(id); }) || null;
+    }
+
+    function selected() { return findById(hidden.value); }
+
+    function showSelection() {
+      var item = selected();
+      if (item) search.value = equipoLabel(item);
+      else if (hidden.value && !search.value.trim()) search.value = 'Equipo #' + hidden.value;
+    }
+
+    function syncClear() {
+      if (!clearBtn) return;
+      clearBtn.classList.toggle('hidden', !search.value.trim() && !hidden.value);
+    }
+
+    function updateStatus() {
+      if (!status) return;
+      var item = selected();
+      if (errorMessage) {
+        status.innerHTML = '<span class="font-medium text-error">No se pudieron cargar tus equipos.</span>';
+      } else if (item) {
+        status.innerHTML = '<span class="font-medium text-success">Equipo seleccionado</span>' +
+          (item.numero_serie ? ' · Serie ' + esc(item.numero_serie) : '');
+      } else if (search.value.trim()) {
+        status.innerHTML = '<span class="font-medium text-error">Selecciona un equipo de la lista.</span>';
+      } else {
+        status.textContent = (required ? 'Obligatorio' : 'Opcional') +
+          '. Busca por tipo, marca, modelo o número de serie.';
+      }
+      syncClear();
+    }
+
+    function renderList(query) {
+      activeIndex = -1;
+      if (errorMessage) {
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-error">' + esc(errorMessage) + '</div>';
+        results.classList.remove('hidden');
+        return;
+      }
+      var current = selected();
+      var q = normalizeText(query);
+      if (current && search.value.trim() === equipoLabel(current)) q = '';
+      visibles = !q ? lista.slice() : lista.filter(function (e) {
+        return equiposSearchText(e).indexOf(q) >= 0;
+      });
+      if (!visibles.length) {
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-on-surface-variant">' +
+          (lista.length ? 'No se encontraron equipos' : 'Aún no tienes equipos registrados') + '</div>';
+      } else {
+        results.innerHTML = visibles.map(function (e, index) {
+          var isSelected = current && String(current.id) === String(e.id);
+          var detalle = [e.capacidad, e.refrigerante].filter(Boolean).join(' · ');
+          return '<button type="button" role="option" data-eq-index="' + index + '" ' +
+            'class="flex w-full items-start gap-2 border-b border-outline-variant px-3 py-2 text-left last:border-0 hover:bg-surface-dim focus:bg-surface-dim focus:outline-none">' +
+            '<span class="material-symbols-outlined mt-0.5 text-base text-primary">ac_unit</span>' +
+            '<span class="min-w-0 flex-1">' +
+              '<span class="block truncate text-sm font-medium text-on-surface">' +
+                esc(equipoLabel(e) || 'Equipo sin datos') + '</span>' +
+              '<span class="block truncate text-xs text-on-surface-variant">' +
+                esc(detalle || 'Equipo registrado') + '</span>' +
+            '</span>' +
+            (isSelected ? '<span class="material-symbols-outlined text-base text-success">check</span>' : '') +
+          '</button>';
+        }).join('');
+      }
+      results.classList.remove('hidden');
+    }
+
+    search.addEventListener('focus', function () {
+      showSelection();
+      renderList(search.value);
+    });
+    search.addEventListener('input', function () {
+      var current = selected();
+      if (current && search.value.trim() !== equipoLabel(current)) hidden.value = '';
+      else if (!current) hidden.value = '';
+      updateStatus();
+      renderList(search.value);
+    });
+    search.addEventListener('blur', function () {
+      setTimeout(function () { results.classList.add('hidden'); }, 180);
+    });
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { results.classList.add('hidden'); return; }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
+      if (results.classList.contains('hidden')) renderList(search.value);
+      var items = results.querySelectorAll('[data-eq-index]');
+      if (!items.length) return;
+      if (e.key === 'Enter') {
+        if (activeIndex < 0) return;
+        e.preventDefault();
+        items[activeIndex].click();
+        return;
+      }
+      e.preventDefault();
+      activeIndex = e.key === 'ArrowDown'
+        ? Math.min(activeIndex + 1, items.length - 1)
+        : Math.max(activeIndex - 1, 0);
+      for (var i = 0; i < items.length; i++) {
+        items[i].classList.toggle('bg-surface-dim', i === activeIndex);
+      }
+      items[activeIndex].scrollIntoView({ block: 'nearest' });
+    });
+
+    results.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    results.addEventListener('click', function (e) {
+      var option = e.target.closest('[data-eq-index]');
+      if (!option) return;
+      var equipo = visibles[Number(option.getAttribute('data-eq-index'))];
+      if (!equipo) return;
+      hidden.value = String(equipo.id);
+      search.value = equipoLabel(equipo);
+      updateStatus();
+      results.classList.add('hidden');
+    });
+    if (clearBtn) {
+      clearBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      clearBtn.addEventListener('click', function () {
+        hidden.value = '';
+        search.value = '';
+        updateStatus();
+        renderList('');
+        search.focus();
+      });
+    }
+
+    showSelection();
+    updateStatus();
+  }
+
+  /* ------------------------------------------------------------------
+   * Buscador de clientes para formularios
+   * Reutiliza el comportamiento del buscador del Supervisor, pero con
+   * selectores locales al formulario y un ID oculto para la FK.
+   * ------------------------------------------------------------------ */
+  function initClientePicker(root, options) {
+    if (!root) return;
+    options = options || {};
+    var wrap = root.querySelector('[data-cli-root]');
+    if (!wrap) return;
+    var search = wrap.querySelector('[data-cli-search]');
+    var hidden = wrap.querySelector('[data-cli-value]');
+    var results = wrap.querySelector('[data-cli-results]');
+    var clearBtn = wrap.querySelector('[data-cli-clear]');
+    var status = wrap.querySelector('[data-cli-status]');
+    if (!search || !hidden || !results) return;
+    var required = wrap.getAttribute('data-cli-required') === '1' || !!options.required;
+    var timer = null;
+    var blurTimer = null;
+    var requestToken = 0;
+    var visibles = [];
+    var selectedId = hidden.value ? String(hidden.value) : '';
+    var selectedName = search.value.trim();
+
+    function syncClear() {
+      if (!clearBtn) return;
+      clearBtn.classList.toggle('hidden', !search.value.trim() && !hidden.value);
+    }
+
+    function updateStatus() {
+      if (!status) return;
+      if (hidden.value) {
+        status.innerHTML = '<span class="font-medium text-success">Cliente seleccionado</span>' +
+          (search.value.trim() ? ' · ' + esc(search.value.trim()) : '');
+      } else if (search.value.trim()) {
+        status.textContent = 'Selecciona un cliente de la lista.';
+      } else {
+        status.textContent = (required ? 'Obligatorio' : 'Opcional') +
+          '. Busca por nombre, apellidos o documento.';
+      }
+      syncClear();
+    }
+
+    function hideResults() {
+      clearTimeout(timer);
+      requestToken += 1;
+      results.classList.add('hidden');
+      results.innerHTML = '';
+    }
+
+    function renderList(list) {
+      visibles = list || [];
+      if (!visibles.length) {
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-on-surface-variant">' +
+          'No se encontraron clientes</div>';
+        results.classList.remove('hidden');
+        return;
+      }
+      results.innerHTML = visibles.map(function (c, index) {
+        var isSelected = hidden.value && String(c.id) === String(hidden.value);
+        var detalle = [c.tipo_documento_display, c.ciudad].filter(Boolean).join(' · ');
+        return '<button type="button" role="option" data-cli-index="' + index + '" ' +
+          'class="flex w-full items-start gap-2 border-b border-outline-variant px-3 py-2 text-left last:border-0 hover:bg-surface-dim focus:bg-surface-dim focus:outline-none">' +
+          '<span class="material-symbols-outlined mt-0.5 text-base text-primary">person</span>' +
+          '<span class="min-w-0 flex-1">' +
+            '<span class="block truncate text-sm font-medium text-on-surface">' +
+              esc(c.nombre_completo || 'Cliente sin nombre') + '</span>' +
+            '<span class="block truncate text-xs text-on-surface-variant">' +
+              esc(detalle || 'Cliente registrado') + '</span>' +
+          '</span>' +
+          (isSelected ? '<span class="material-symbols-outlined text-base text-success">check</span>' : '') +
+        '</button>';
+      }).join('');
+      results.classList.remove('hidden');
+    }
+
+    function buscar(query) {
+      var token = ++requestToken;
+      results.classList.remove('hidden');
+      results.innerHTML = '<div class="flex items-center gap-2 px-3 py-3 text-sm text-on-surface-variant">' +
+        '<span class="material-symbols-outlined animate-spin text-base">progress_activity</span>Buscando clientes…</div>';
+      api('/api/clientes/disponibles/?search=' + encodeURIComponent(query)).then(function (data) {
+        if (token !== requestToken) return;
+        var list = Array.isArray(data) ? data : (data.results || []);
+        renderList(list);
+        updateStatus();
+      }).catch(function (err) {
+        if (token !== requestToken) return;
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-error">' +
+          esc(apiErrorMessage(err)) + '</div>';
+        results.classList.remove('hidden');
+        updateStatus();
+      });
+    }
+
+    function programarBusqueda() {
+      clearTimeout(timer);
+      requestToken += 1;
+      visibles = [];
+      results.classList.add('hidden');
+      results.innerHTML = '';
+      var q = search.value.trim();
+      if (q.length < 2) {
+        hideResults();
+        updateStatus();
+        return;
+      }
+      timer = setTimeout(function () { buscar(q); }, 350);
+    }
+
+    search.addEventListener('focus', function () {
+      clearTimeout(blurTimer);
+      syncClear();
+      updateStatus();
+      if (search.value.trim().length >= 2 && !hidden.value) programarBusqueda();
+    });
+    search.addEventListener('input', function () {
+      if (selectedId && search.value.trim() !== selectedName) {
+        selectedId = '';
+        selectedName = '';
+        hidden.value = '';
+      } else if (!selectedId) {
+        hidden.value = '';
+      }
+      updateStatus();
+      programarBusqueda();
+    });
+    search.addEventListener('blur', function () {
+      blurTimer = setTimeout(function () { hideResults(); }, 180);
+    });
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { hideResults(); return; }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
+      var items = results.querySelectorAll('[data-cli-index]');
+      if (!items.length) return;
+      var active = -1;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].classList.contains('bg-surface-dim')) { active = i; break; }
+      }
+      if (e.key === 'Enter') {
+        if (active < 0) return;
+        e.preventDefault();
+        items[active].click();
+        return;
+      }
+      e.preventDefault();
+      active = e.key === 'ArrowDown'
+        ? Math.min(active + 1, items.length - 1)
+        : Math.max(active - 1, 0);
+      for (var j = 0; j < items.length; j++) {
+        items[j].classList.toggle('bg-surface-dim', j === active);
+      }
+      items[active].scrollIntoView({ block: 'nearest' });
+    });
+
+    results.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    results.addEventListener('click', function (e) {
+      var option = e.target.closest('[data-cli-index]');
+      if (!option) return;
+      var cliente = visibles[Number(option.getAttribute('data-cli-index'))];
+      if (!cliente) return;
+      hidden.value = String(cliente.id);
+      search.value = cliente.nombre_completo || '';
+      selectedId = hidden.value;
+      selectedName = search.value.trim();
+      hidden.dispatchEvent(new Event('change', { bubbles: true }));
+      updateStatus();
+      hideResults();
+      search.focus();
+    });
+    if (clearBtn) {
+      clearBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      clearBtn.addEventListener('click', function () {
+        clearTimeout(timer);
+        hidden.value = '';
+        search.value = '';
+        selectedId = '';
+        selectedName = '';
+        hidden.dispatchEvent(new Event('change', { bubbles: true }));
+        hideResults();
+        updateStatus();
+        search.focus();
+      });
+    }
+
+    updateStatus();
+  }
+
+  /* ------------------------------------------------------------------
+   * Buscador de equipos para Agenda
+   * Consulta el endpoint existente /api/equipos/?search= y respeta el
+   * alcance del usuario y el cliente seleccionado en el formulario.
+   * ------------------------------------------------------------------ */
+  function initEquipoAgendaPicker(root) {
+    if (!root) return;
+    var wrap = root.querySelector('[data-eqa-root]');
+    if (!wrap) return;
+    var search = wrap.querySelector('[data-eqa-search]');
+    var hidden = wrap.querySelector('[data-eqa-value]');
+    var results = wrap.querySelector('[data-eqa-results]');
+    var clearBtn = wrap.querySelector('[data-eqa-clear]');
+    var status = wrap.querySelector('[data-eqa-status]');
+    var clienteValue = root.querySelector('[data-cli-value]');
+    if (!search || !hidden || !results) return;
+    var timer = null;
+    var blurTimer = null;
+    var requestToken = 0;
+    var visibles = [];
+    var selectedId = hidden.value ? String(hidden.value) : '';
+    var selectedName = search.value.trim();
+
+    function syncClear() {
+      if (!clearBtn) return;
+      clearBtn.classList.toggle('hidden', !search.value.trim() && !hidden.value);
+    }
+
+    var required = wrap.getAttribute('data-eqa-required') === '1';
+
+    function updateStatus() {
+      if (!status) return;
+      if (hidden.value) {
+        status.innerHTML = '<span class="font-medium text-success">Equipo seleccionado</span>' +
+          (search.value.trim() ? ' · ' + esc(search.value.trim()) : '');
+      } else if (search.value.trim()) {
+        status.textContent = 'Selecciona un equipo de la lista o limpia el campo.';
+      } else {
+        status.textContent = (required ? 'Obligatorio' : 'Opcional') +
+          '. Busca por marca, modelo, serie o cliente.';
+      }
+      syncClear();
+    }
+
+    function hideResults() {
+      clearTimeout(timer);
+      requestToken += 1;
+      results.classList.add('hidden');
+      results.innerHTML = '';
+    }
+
+    function renderList(list) {
+      var vistos = {};
+      visibles = (list || []).filter(function (e) {
+        if (!e || e.id == null) return false;
+        var key = String(e.id);
+        if (vistos[key]) return false;
+        vistos[key] = true;
+        return true;
+      });
+      if (!visibles.length) {
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-on-surface-variant">' +
+          'No se encontraron equipos</div>';
+        results.classList.remove('hidden');
+        return;
+      }
+      results.innerHTML = visibles.map(function (e, index) {
+        var isSelected = hidden.value && String(e.id) === String(hidden.value);
+        var detalle = [e.cliente_nombre, e.numero_serie, e.capacidad, e.refrigerante]
+          .filter(Boolean).join(' · ');
+        return '<button type="button" role="option" data-eqa-index="' + index + '" ' +
+          'class="flex w-full items-start gap-2 border-b border-outline-variant px-3 py-2 text-left last:border-0 hover:bg-surface-dim focus:bg-surface-dim focus:outline-none">' +
+          '<span class="material-symbols-outlined mt-0.5 text-base text-primary">ac_unit</span>' +
+          '<span class="min-w-0 flex-1">' +
+            '<span class="block truncate text-sm font-medium text-on-surface">' +
+              esc(equipoLabel(e) || 'Equipo sin datos') + '</span>' +
+            '<span class="block truncate text-xs text-on-surface-variant">' +
+              esc(detalle || 'Equipo registrado') + '</span>' +
+          '</span>' +
+          (isSelected ? '<span class="material-symbols-outlined text-base text-success">check</span>' : '') +
+        '</button>';
+      }).join('');
+      results.classList.remove('hidden');
+    }
+
+    function buscar(query) {
+      if (clienteValue && !clienteValue.value) {
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-on-surface-variant">Selecciona primero un cliente</div>';
+        results.classList.remove('hidden');
+        return;
+      }
+      var token = ++requestToken;
+      results.classList.remove('hidden');
+      results.innerHTML = '<div class="flex items-center gap-2 px-3 py-3 text-sm text-on-surface-variant">' +
+        '<span class="material-symbols-outlined animate-spin text-base">progress_activity</span>Buscando equipos…</div>';
+      var url = '/api/equipos/?search=' + encodeURIComponent(query);
+      if (clienteValue && clienteValue.value) url += '&cliente=' + encodeURIComponent(clienteValue.value);
+      fetchAll(url).then(function (list) {
+        if (token !== requestToken) return;
+        renderList(list);
+        updateStatus();
+      }).catch(function (err) {
+        if (token !== requestToken) return;
+        results.innerHTML = '<div class="px-3 py-3 text-sm text-error">' +
+          esc(apiErrorMessage(err)) + '</div>';
+        results.classList.remove('hidden');
+        updateStatus();
+      });
+    }
+
+    function programarBusqueda() {
+      clearTimeout(timer);
+      requestToken += 1;
+      visibles = [];
+      results.classList.add('hidden');
+      results.innerHTML = '';
+      var q = search.value.trim();
+      if (q.length < 2) {
+        hideResults();
+        updateStatus();
+        return;
+      }
+      timer = setTimeout(function () { buscar(q); }, 350);
+    }
+
+    search.addEventListener('focus', function () {
+      clearTimeout(blurTimer);
+      syncClear();
+      updateStatus();
+      if (search.value.trim().length >= 2 && !hidden.value) programarBusqueda();
+    });
+    search.addEventListener('input', function () {
+      if (selectedId && search.value.trim() !== selectedName) {
+        selectedId = '';
+        selectedName = '';
+        hidden.value = '';
+      } else if (!selectedId) {
+        hidden.value = '';
+      }
+      updateStatus();
+      programarBusqueda();
+    });
+    search.addEventListener('blur', function () {
+      blurTimer = setTimeout(function () { hideResults(); }, 180);
+    });
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { hideResults(); return; }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
+      var items = results.querySelectorAll('[data-eqa-index]');
+      if (!items.length) return;
+      var active = -1;
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].classList.contains('bg-surface-dim')) { active = i; break; }
+      }
+      if (e.key === 'Enter') {
+        if (active < 0) return;
+        e.preventDefault();
+        items[active].click();
+        return;
+      }
+      e.preventDefault();
+      active = e.key === 'ArrowDown'
+        ? Math.min(active + 1, items.length - 1)
+        : Math.max(active - 1, 0);
+      for (var j = 0; j < items.length; j++) {
+        items[j].classList.toggle('bg-surface-dim', j === active);
+      }
+      items[active].scrollIntoView({ block: 'nearest' });
+    });
+
+    results.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    results.addEventListener('click', function (e) {
+      var option = e.target.closest('[data-eqa-index]');
+      if (!option) return;
+      var equipo = visibles[Number(option.getAttribute('data-eqa-index'))];
+      if (!equipo) return;
+      hidden.value = String(equipo.id);
+      search.value = equipoLabel(equipo);
+      selectedId = hidden.value;
+      selectedName = search.value.trim();
+      updateStatus();
+      hideResults();
+      search.focus();
+    });
+    if (clearBtn) {
+      clearBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      clearBtn.addEventListener('click', function () {
+        clearTimeout(timer);
+        hidden.value = '';
+        search.value = '';
+        selectedId = '';
+        selectedName = '';
+        hideResults();
+        updateStatus();
+        search.focus();
+      });
+    }
+
+    if (clienteValue) {
+      clienteValue.addEventListener('change', function () {
+        clearTimeout(timer);
+        hidden.value = '';
+        search.value = '';
+        selectedId = '';
+        selectedName = '';
+        hideResults();
+        updateStatus();
+      });
+    }
+
+    updateStatus();
+  }
+
+  function initRelacionPickers(root, configs) {
+    if (!root) return;
+    configs = configs || RELATION_PICKER_CONFIGS;
+    var form = root.matches && root.matches('form') ? root : root.querySelector('form');
+    if (form && !form.dataset.pickerValidationBound) {
+      form.dataset.pickerValidationBound = '1';
+      form.addEventListener('submit', function (event) {
+        var invalid = null;
+        form.querySelectorAll('[data-rel-root], [data-cli-root], [data-eqa-root], [data-eq-root]').forEach(function (wrap) {
+          var required = wrap.getAttribute('data-rel-required') === '1' ||
+            wrap.getAttribute('data-cli-required') === '1' ||
+            wrap.getAttribute('data-eqa-required') === '1' ||
+            wrap.getAttribute('data-eq-required') === '1';
+          if (!required) return;
+          var hidden = wrap.querySelector('[data-rel-value], [data-cli-value], [data-eqa-value], [data-eq-value]');
+          if (hidden && hidden.value) return;
+          var status = wrap.querySelector('[data-rel-status], [data-cli-status], [data-eqa-status], [data-eq-status]');
+          if (status) {
+            status.innerHTML = '<span class="font-medium text-error">Selecciona un registro de la lista.</span>';
+          }
+          if (!invalid) invalid = wrap.querySelector('[data-rel-search], [data-cli-search], [data-eqa-search], [data-eq-search]');
+        });
+        if (invalid) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          invalid.focus();
+        }
+      }, true);
+    }
+
+    root.querySelectorAll('[data-rel-root]').forEach(function (wrap) {
+      var config = configs[wrap.getAttribute('data-rel-name')];
+      if (!config) return;
+      var search = wrap.querySelector('[data-rel-search]');
+      var hidden = wrap.querySelector('[data-rel-value]');
+      var results = wrap.querySelector('[data-rel-results]');
+      var clearBtn = wrap.querySelector('[data-rel-clear]');
+      var status = wrap.querySelector('[data-rel-status]');
+      if (!search || !hidden || !results) return;
+
+      var timer = null;
+      var blurTimer = null;
+      var requestToken = 0;
+      var visibles = [];
+      var selectedId = hidden.value ? String(hidden.value) : '';
+      var selectedName = search.value.trim();
+      var required = wrap.getAttribute('data-rel-required') === '1';
+      var clienteValue = config.filterByClient ? root.querySelector('[data-cli-value]') : null;
+
+      function updateStatus(message, isError) {
+        if (status) {
+          if (message) status.innerHTML = '<span class="font-medium ' + (isError ? 'text-error' : 'text-success') + '">' + esc(message) + '</span>';
+          else if (hidden.value) status.innerHTML = '<span class="font-medium text-success">Seleccionado</span>';
+          else status.textContent = clienteValue && !clienteValue.value
+            ? 'Selecciona primero un cliente.'
+            : (required ? 'Obligatorio' : 'Opcional') + '. Escribe al menos 2 caracteres para buscar.';
+        }
+        if (clearBtn) clearBtn.classList.toggle('hidden', !search.value.trim() && !hidden.value);
+      }
+
+      function hideResults() {
+        clearTimeout(timer);
+        requestToken += 1;
+        results.classList.add('hidden');
+        results.innerHTML = '';
+      }
+
+      function renderList(list) {
+        visibles = (list || []).filter(function (item) { return item && item.id != null; });
+        if (!visibles.length) {
+          results.innerHTML = '<div class="px-3 py-3 text-sm text-on-surface-variant">' + esc(config.emptyText || 'No se encontraron registros') + '</div>';
+        } else {
+          results.innerHTML = visibles.map(function (item, index) {
+            var title = config.label(item);
+            var detail = config.detail ? config.detail(item) : '';
+            var selected = hidden.value && String(item.id) === String(hidden.value);
+            return '<button type="button" role="option" data-rel-index="' + index + '" class="flex w-full items-start gap-2 border-b border-outline-variant px-3 py-2 text-left last:border-0 hover:bg-surface-dim focus:bg-surface-dim focus:outline-none">' +
+              '<span class="material-symbols-outlined mt-0.5 text-base text-primary">' + esc(config.icon || 'search') + '</span>' +
+              '<span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium text-on-surface">' + esc(title || ('Registro #' + item.id)) + '</span>' +
+              (detail ? '<span class="block truncate text-xs text-on-surface-variant">' + esc(detail) + '</span>' : '') + '</span>' +
+              (selected ? '<span class="material-symbols-outlined text-base text-success">check</span>' : '') + '</button>';
+          }).join('');
+        }
+        results.classList.remove('hidden');
+      }
+
+      function buscar(query) {
+        if (clienteValue && !clienteValue.value) {
+          results.innerHTML = '<div class="px-3 py-3 text-sm text-on-surface-variant">Selecciona primero un cliente</div>';
+          results.classList.remove('hidden');
+          return;
+        }
+        var token = ++requestToken;
+        results.innerHTML = '<div class="flex items-center gap-2 px-3 py-3 text-sm text-on-surface-variant"><span class="material-symbols-outlined animate-spin text-base">progress_activity</span>Buscando…</div>';
+        results.classList.remove('hidden');
+        var url = config.endpoint + '?search=' + encodeURIComponent(query);
+        if (clienteValue && clienteValue.value) url += '&cliente=' + encodeURIComponent(clienteValue.value);
+        fetchAll(url).then(function (list) {
+          if (token !== requestToken) return;
+          renderList(list);
+          updateStatus();
+        }).catch(function (err) {
+          if (token !== requestToken) return;
+          results.innerHTML = '<div class="px-3 py-3 text-sm text-error">' + esc(apiErrorMessage(err)) + '</div>';
+          results.classList.remove('hidden');
+        });
+      }
+
+      function programarBusqueda() {
+        clearTimeout(timer);
+        requestToken += 1;
+        visibles = [];
+        results.classList.add('hidden');
+        results.innerHTML = '';
+        var query = search.value.trim();
+        if (clienteValue && !clienteValue.value) { hideResults(); updateStatus(); return; }
+        if (query.length < 2) { hideResults(); updateStatus(); return; }
+        timer = setTimeout(function () { buscar(query); }, 350);
+      }
+
+      search.addEventListener('focus', function () {
+        clearTimeout(blurTimer);
+        if (search.value.trim().length >= 2 && !hidden.value) programarBusqueda();
+      });
+      search.addEventListener('input', function () {
+        if (selectedId && search.value.trim() !== selectedName) {
+          selectedId = '';
+          selectedName = '';
+          hidden.value = '';
+        } else if (!selectedId) hidden.value = '';
+        updateStatus();
+        programarBusqueda();
+      });
+      search.addEventListener('blur', function () { blurTimer = setTimeout(hideResults, 180); });
+      search.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') { hideResults(); return; }
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp' && event.key !== 'Enter') return;
+        var items = results.querySelectorAll('[data-rel-index]');
+        if (!items.length) return;
+        var active = -1;
+        items.forEach(function (el, index) { if (el.classList.contains('bg-surface-dim')) active = index; });
+        if (event.key === 'Enter') {
+          if (active < 0) return;
+          event.preventDefault();
+          items[active].click();
+          return;
+        }
+        event.preventDefault();
+        active = event.key === 'ArrowDown' ? Math.min(active + 1, items.length - 1) : Math.max(active - 1, 0);
+        items.forEach(function (el, index) { el.classList.toggle('bg-surface-dim', index === active); });
+        items[active].scrollIntoView({ block: 'nearest' });
+      });
+      results.addEventListener('mousedown', function (event) { event.preventDefault(); });
+      results.addEventListener('click', function (event) {
+        var option = event.target.closest('[data-rel-index]');
+        if (!option) return;
+        var item = visibles[Number(option.getAttribute('data-rel-index'))];
+        if (!item) return;
+        hidden.value = String(item.id);
+        search.value = config.label(item) || ('Registro #' + item.id);
+        selectedId = hidden.value;
+        selectedName = search.value.trim();
+        updateStatus();
+        hideResults();
+      });
+      if (clearBtn) {
+        clearBtn.addEventListener('mousedown', function (event) { event.preventDefault(); });
+        clearBtn.addEventListener('click', function () {
+          clearTimeout(timer);
+          hidden.value = '';
+          search.value = '';
+          selectedId = '';
+          selectedName = '';
+          hideResults();
+          updateStatus();
+          search.focus();
+        });
+      }
+      if (clienteValue) {
+        clienteValue.addEventListener('change', function () {
+          clearTimeout(timer);
+          hidden.value = '';
+          search.value = '';
+          selectedId = '';
+          selectedName = '';
+          hideResults();
+          updateStatus();
+        });
+      }
+      updateStatus();
+    });
+  }
+
+  var RELATION_PICKER_CONFIGS = {
+    tecnico: {
+      endpoint: '/api/tecnicos/', icon: 'engineering', emptyText: 'No se encontraron técnicos',
+      label: function (item) { return item.nombre || ('Técnico #' + item.id); },
+      detail: function (item) { return [item.especialidad, item.email].filter(Boolean).join(' · '); },
+    },
+    supervisor: {
+      endpoint: '/api/supervisores/', icon: 'supervisor_account', emptyText: 'No se encontraron supervisores',
+      label: function (item) { return item.nombre || ('Supervisor #' + item.id); },
+      detail: function (item) { return item.email || ''; },
+    },
+    tipo_equipo: {
+      endpoint: '/api/tipos-equipo/', icon: 'ac_unit', emptyText: 'No se encontraron tipos de equipo',
+      label: function (item) { return item.nombre || ('Tipo #' + item.id); },
+      detail: function (item) { return item.descripcion || ''; },
+    },
+    solicitud: {
+      filterByClient: true,
+      endpoint: '/api/solicitudes/', icon: 'assignment', emptyText: 'No se encontraron solicitudes',
+      label: function (item) { return '#' + item.id + ' · ' + (item.tipo_solicitud_display || item.tipo_solicitud || 'Solicitud'); },
+      detail: function (item) { return [item.cliente_nombre, item.tipo_equipo_solicitado].filter(Boolean).join(' · '); },
+    },
+    orden: {
+      filterByClient: true,
+      endpoint: '/api/servicios/', icon: 'handyman', emptyText: 'No se encontraron órdenes',
+      label: function (item) { return item.numero || ('Orden #' + item.id); },
+      detail: function (item) { return [item.cliente_nombre, item.tipo_servicio_display].filter(Boolean).join(' · '); },
+    },
+    instalacion: {
+      filterByClient: true,
+      endpoint: '/api/instalaciones/', icon: 'home_repair_service', emptyText: 'No se encontraron instalaciones',
+      label: function (item) { return 'Instalación #' + item.id; },
+      detail: function (item) { return [item.cliente_nombre, item.equipo_nombre, item.tecnico_nombre].filter(Boolean).join(' · '); },
+    },
+  };
+
   function fieldHTML(f) {
     var req = f.required ? ' required' : '';
     var cls = 'adm-input';
@@ -468,6 +1397,97 @@
                        (String(o.value) === String(val) ? ' selected' : '') + '>' +
                        esc(o.label) + '</option>';
               }).join('') + '</select>';
+    } else if (f.type === 'cliente') {
+      var cliDisplay = f.displayValue != null ? f.displayValue : (val ? 'Cliente #' + val : '');
+      inner =
+        '<div data-cli-root data-cli-required="' + (f.required ? '1' : '0') + '">' +
+          '<div class="relative">' +
+            '<span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-on-surface-variant">search</span>' +
+            '<input id="f_' + esc(f.name) + '" type="text" class="' + cls + '" ' +
+              'style="padding-left:2.25rem;padding-right:2.25rem" ' +
+              'autocomplete="off" placeholder="' + esc(f.placeholder || 'Buscar cliente por nombre, apellidos o documento...') + '" ' +
+              'value="' + esc(cliDisplay) + '"' + req + ' data-cli-search>' +
+            '<button type="button" class="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md p-1 text-on-surface-variant transition-colors hover:bg-surface-dim" data-cli-clear aria-label="Quitar cliente">' +
+              '<span class="material-symbols-outlined text-base">close</span>' +
+            '</button>' +
+            '<div class="absolute left-0 right-0 top-full z-[60] mt-1 hidden max-h-60 overflow-y-auto rounded-xl border border-outline-variant bg-surface shadow-lg" role="listbox" data-cli-results></div>' +
+          '</div>' +
+          '<p class="mt-1 text-xs text-on-surface-variant" data-cli-status></p>' +
+          '<input type="hidden" name="' + esc(f.name) + '" value="' + esc(val) + '" data-cli-value>' +
+        '</div>';
+      return '<div' + span + '>' + label + inner + hint + '</div>';
+    } else if (f.type === 'producto') {
+      inner =
+        '<div data-ps-root>' +
+          '<div class="relative">' +
+            '<span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-on-surface-variant">search</span>' +
+            '<input id="f_' + esc(f.name) + '" name="' + esc(f.name) + '" type="text" class="' + cls + ' pl-9 pr-9" ' +
+              'style="padding-left:2.25rem;padding-right:2.25rem" ' +
+              'autocomplete="off" maxlength="150" placeholder="' + esc(f.placeholder || 'Buscar producto por nombre o categoría...') + '" ' +
+              'value="' + esc(val) + '"' + req + ' data-ps-input>' +
+            '<button type="button" class="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md p-1 text-on-surface-variant transition-colors hover:bg-surface-dim" data-ps-clear aria-label="Quitar producto">' +
+              '<span class="material-symbols-outlined text-base">close</span>' +
+            '</button>' +
+            '<div class="absolute left-0 right-0 top-full z-[60] mt-1 hidden max-h-60 overflow-y-auto rounded-xl border border-outline-variant bg-surface shadow-lg" role="listbox" data-ps-results></div>' +
+          '</div>' +
+          '<p class="mt-1 text-xs text-on-surface-variant" data-ps-status></p>' +
+        '</div>';
+      return '<div' + span + '>' + label + inner + hint + '</div>';
+    } else if (f.type === 'equipo_agenda') {
+      var eqaDisplay = f.displayValue != null ? f.displayValue : (val ? 'Equipo #' + val : '');
+      inner =
+        '<div data-eqa-root data-eqa-required="' + (f.required ? '1' : '0') + '">' +
+          '<div class="relative">' +
+            '<span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-on-surface-variant">search</span>' +
+            '<input id="f_' + esc(f.name) + '" type="text" class="' + cls + '" ' +
+              'style="padding-left:2.25rem;padding-right:2.25rem" ' +
+              'autocomplete="off" placeholder="' + esc(f.placeholder || 'Buscar equipo por marca, modelo o número de serie...') + '" ' +
+              'value="' + esc(eqaDisplay) + '"' + req + ' data-eqa-search>' +
+            '<button type="button" class="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md p-1 text-on-surface-variant transition-colors hover:bg-surface-dim" data-eqa-clear aria-label="Quitar equipo">' +
+              '<span class="material-symbols-outlined text-base">close</span>' +
+            '</button>' +
+            '<div class="absolute left-0 right-0 top-full z-[60] mt-1 hidden max-h-60 overflow-y-auto rounded-xl border border-outline-variant bg-surface shadow-lg" role="listbox" data-eqa-results></div>' +
+          '</div>' +
+          '<p class="mt-1 text-xs text-on-surface-variant" data-eqa-status></p>' +
+          '<input type="hidden" name="' + esc(f.name) + '" value="' + esc(val) + '" data-eqa-value>' +
+        '</div>';
+      return '<div' + span + '>' + label + inner + hint + '</div>';
+    } else if (f.type === 'relacion') {
+      var relDisplay = f.displayValue != null ? f.displayValue : (val ? 'Registro #' + val : '');
+      inner =
+        '<div data-rel-root data-rel-name="' + esc(f.name) + '" data-rel-required="' + (f.required ? '1' : '0') + '">' +
+          '<div class="relative">' +
+            '<span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-on-surface-variant">search</span>' +
+            '<input id="f_' + esc(f.name) + '" type="text" class="' + cls + '" style="padding-left:2.25rem;padding-right:2.25rem" autocomplete="off" placeholder="' + esc(f.placeholder || ('Buscar ' + f.label.toLowerCase() + '...')) + '" value="' + esc(relDisplay) + '"' + req + ' data-rel-search>' +
+            '<button type="button" class="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md p-1 text-on-surface-variant transition-colors hover:bg-surface-dim" data-rel-clear aria-label="Quitar ' + esc(f.label.toLowerCase()) + '"><span class="material-symbols-outlined text-base">close</span></button>' +
+            '<div class="absolute left-0 right-0 top-full z-[60] mt-1 hidden max-h-60 overflow-y-auto rounded-xl border border-outline-variant bg-surface shadow-lg" role="listbox" data-rel-results></div>' +
+          '</div>' +
+          '<p class="mt-1 text-xs text-on-surface-variant" data-rel-status></p>' +
+          '<input type="hidden" name="' + esc(f.name) + '" value="' + esc(val) + '" data-rel-value>' +
+        '</div>';
+      return '<div' + span + '>' + label + inner + hint + '</div>';
+    } else if (f.type === 'equipo') {
+      var eqOption = (f.options || []).filter(function (o) {
+        return String(o.value) === String(val);
+      })[0];
+      inner =
+        '<div data-eq-root data-eq-required="' + (f.required ? '1' : '0') + '">' +
+          '<div class="relative">' +
+            '<span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-on-surface-variant">search</span>' +
+            '<input id="f_' + esc(f.name) + '" type="text" class="' + cls + '" ' +
+              'style="padding-left:2.25rem;padding-right:2.25rem" ' +
+              'autocomplete="off" placeholder="' + esc(f.placeholder || 'Buscar equipo por tipo, marca o modelo...') + '" ' +
+              'value="' + esc(eqOption ? eqOption.label : (val ? 'Equipo #' + val : '')) + '"' + req + ' data-eq-search>' +
+            (f.required ? '' :
+              '<button type="button" class="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-md p-1 text-on-surface-variant transition-colors hover:bg-surface-dim" data-eq-clear aria-label="Quitar equipo">' +
+                '<span class="material-symbols-outlined text-base">close</span>' +
+              '</button>') +
+            '<div class="absolute left-0 right-0 top-full z-[60] mt-1 hidden max-h-60 overflow-y-auto rounded-xl border border-outline-variant bg-surface shadow-lg" role="listbox" data-eq-results></div>' +
+          '</div>' +
+          '<p class="mt-1 text-xs text-on-surface-variant" data-eq-status></p>' +
+          '<input type="hidden" name="' + esc(f.name) + '" value="' + esc(val) + '" data-eq-value>' +
+        '</div>';
+      return '<div' + span + '>' + label + inner + hint + '</div>';
     } else if (f.type === 'textarea') {
       inner = '<textarea id="f_' + esc(f.name) + '" name="' + esc(f.name) + '" class="adm-textarea"' +
               req + ' placeholder="' + esc(f.placeholder || '') + '">' + esc(val) + '</textarea>';
@@ -1254,11 +2274,9 @@
   }
 
   async function openEquipoClienteForm(item) {
-    var tipos = [];
-    try { tipos = await fetchAll('/api/tipos-equipo/'); } catch (e) { tipos = []; }
     var fields = [
-      { name: 'tipo', label: 'Tipo de equipo', type: 'select', required: true, value: item ? item.tipo : '',
-        options: optList(tipos, 'id', 'nombre') },
+      { name: 'tipo', label: 'Tipo de equipo', type: 'relacion', required: true, value: item ? item.tipo : '',
+        displayValue: item ? (item.tipo_nombre || '') : '' },
       { name: 'marca', label: 'Marca', type: 'text', required: true, value: item ? item.marca : '' },
       { name: 'modelo', label: 'Modelo', type: 'text', required: true, value: item ? item.modelo : '' },
       { name: 'numero_serie', label: 'No. de serie', type: 'text', required: true, value: item ? item.numero_serie : '',
@@ -1272,6 +2290,7 @@
     var modal = openModal(item ? 'Editar equipo' : 'Registrar equipo', formHTML(fields), {
       footer: modalFooter('Cancelar', item ? 'Guardar cambios' : 'Registrar equipo'),
     });
+    initRelacionPickers(modal);
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var data = getFormData(e.target);
@@ -1734,7 +2753,7 @@
       '</div>' +
       (i.observaciones ? '<p class="mt-3 text-sm text-on-surface-variant">' + esc(i.observaciones) + '</p>' : '') +
       '<div class="mt-4 flex flex-wrap gap-2">' +
-        '<button class="btn btn-ghost" data-det="editar">Editar</button>' +
+        (!(S.user && S.user.role === 'tecnico') ? '<button class="btn btn-ghost" data-det="editar">Editar</button>' : '') +
         '<button class="btn btn-ghost" data-det="reprogramar">Reprogramar</button>' +
         '<button class="btn btn-ghost" data-det="estado">Cambiar estado</button>' +
         '<a class="btn btn-ghost" href="https://www.google.com/maps?q=' + esc(i.direccion) + ', ' + esc(i.ciudad || '') +
@@ -1756,7 +2775,8 @@
     renderDetMateriales(i);
     renderDetHistorial(i);
 
-    wrap.querySelector('[data-det=editar]').addEventListener('click', function () { closeModal(); openInstalacionForm(i); });
+    var editButton = wrap.querySelector('[data-det=editar]');
+    if (editButton) editButton.addEventListener('click', function () { closeModal(); openInstalacionForm(i); });
     wrap.querySelector('[data-det=estado]').addEventListener('click', function () { closeModal(); openEstadoModal('instalaciones', i, ESTADOS_INSTALACION); });
     wrap.querySelector('[data-det=reprogramar]').addEventListener('click', function () { closeModal(); reprogramarInstalacion(i); });
   }
@@ -3025,16 +4045,20 @@
   async function openServicioForm(item) {
     var isClient = S.user.role === 'cliente';
     var isTecnico = S.user.role === 'tecnico';
-    var equipos = [], tecnicos = [];
-    try { equipos = await fetchAll('/api/equipos/'); } catch (e) {}
-    function equipoLabel(e) {
-      return [e.tipo_nombre, e.marca, e.modelo, e.numero_serie].filter(Boolean).join(' · ');
+    var equipos = [], equiposError = '';
+    if (isClient) {
+      try {
+        var equipoPage = await api('/api/equipos/?page=1');
+        equipos = Array.isArray(equipoPage) ? equipoPage : (equipoPage.results || []);
+      }
+      catch (e) { equiposError = apiErrorMessage(e); }
     }
     var fields;
     if (isClient) {
       fields = [
-        { name: 'equipo', label: 'Equipo', type: 'select', value: item ? item.equipo : '',
-          options: optList(equipos, 'id', equipoLabel) },
+        { name: 'equipo', label: 'Equipo', type: 'equipo_agenda', required: true,
+          value: item ? item.equipo : '', displayValue: item ? (item.equipo_nombre || '') : '',
+          hint: 'Busca por tipo, marca, modelo o número de serie.' },
         { name: 'tipo_servicio', label: 'Tipo de servicio', type: 'select', value: item ? item.tipo_servicio : 'reparacion',
           options: TIPOS_SERVICIO },
         { name: 'fecha', label: 'Fecha', type: 'date', required: true, value: item ? item.fecha : new Date().toISOString().slice(0, 10) },
@@ -3049,12 +4073,13 @@
         { name: 'observaciones', label: 'Observaciones técnicas', type: 'textarea', span: 2, value: item ? item.observaciones : '' },
       ];
     } else {
-      try { tecnicos = await fetchAll('/api/tecnicos/'); } catch (e) {}
       fields = [
-        { name: 'equipo', label: 'Equipo', type: 'select', value: item ? item.equipo : '',
-          options: optList(equipos, 'id', equipoLabel) },
-        { name: 'tecnico', label: 'Técnico asignado', type: 'select', value: item ? item.tecnico : '',
-          options: optList(tecnicos, 'id', 'nombre') },
+        { name: 'cliente', label: 'Cliente', type: 'cliente', required: true,
+          value: item ? item.cliente : '', displayValue: item ? (item.cliente_nombre || '') : '' },
+        { name: 'equipo', label: 'Equipo', type: 'equipo_agenda', required: true,
+          value: item ? item.equipo : '', displayValue: item ? (item.equipo_nombre || '') : '' },
+        { name: 'tecnico', label: 'Técnico asignado', type: 'relacion', value: item ? item.tecnico : '',
+          displayValue: item ? (item.tecnico_nombre || '') : '' },
         { name: 'tipo_servicio', label: 'Tipo de servicio', type: 'select', value: item ? item.tipo_servicio : 'reparacion',
           options: TIPOS_SERVICIO },
         { name: 'fecha', label: 'Fecha', type: 'date', required: true, value: item ? item.fecha : new Date().toISOString().slice(0, 10) },
@@ -3065,79 +4090,21 @@
         { name: 'observaciones', label: 'Observaciones técnicas', type: 'textarea', span: 2, value: item ? item.observaciones : '' },
       ];
     }
-    var sinEquipos = isClient && !equipos.length;
-    var clienteSearchHTML = '';
-    if (!isClient && !isTecnico) {
-      var cliVal = item ? item.cliente : '';
-      var cliNombre = item ? (item.cliente_nombre || '') : '';
-      clienteSearchHTML =
-        '<div class="mb-3">' +
-          '<label class="field-label" for="f_cliente_search">Buscar cliente</label>' +
-          '<div style="position:relative">' +
-            '<input id="f_cliente_search" class="adm-input" type="text" placeholder="Escribe nombre o apellido del cliente…" autocomplete="off" value="' + esc(cliNombre) + '" style="width:100%">' +
-            '<input id="f_cliente" name="cliente" type="hidden" value="' + esc(cliVal) + '">' +
-            '<div id="f_cliente_results" class="hidden" style="position:absolute;top:100%;left:0;right:0;z-index:50;background:#fff;border:1px solid #e2e8f0;border-radius:0.5rem;max-height:240px;overflow-y:auto;box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1);margin-top:2px"></div>' +
-          '</div>' +
-          '<p id="f_cliente_hint" class="mt-1 text-xs text-on-surface-variant">' +
-            (cliVal ? '<span class="text-success">Cliente seleccionado</span>' : 'Escribe al menos 2 caracteres para buscar') +
-          '</p>' +
-        '</div>';
-    }
+    var sinEquipos = isClient && !equipos.length && !equiposError;
     var body = (sinEquipos
       ? '<div class="info-banner mb-3"><span class="material-symbols-outlined text-base">info</span>' +
         '<span class="flex-1">Aún no has registrado equipos. Regístralo desde <strong>Mis equipos</strong> para poder solicitar el servicio.</span>' +
         '<button type="button" class="btn btn-primary" data-ir-mis-equipos>Ir a Mis equipos</button></div>'
-      : '') + clienteSearchHTML + formHTML(fields);
+      : '') + formHTML(fields);
     var modal = openModal(item ? 'Editar orden #' + item.numero : (isClient ? 'Solicitar reparación' : S.user.role === 'supervisor' ? 'Nuevo Trabajo' : 'Nueva orden de servicio'), body, {
       width: '720px',
       footer: modalFooter('Cancelar', item ? 'Guardar cambios' : (isClient ? 'Enviar solicitud' : S.user.role === 'supervisor' ? 'Crear trabajo' : 'Crear orden')),
     });
     var btnIr = modal.querySelector('[data-ir-mis-equipos]');
     if (btnIr) btnIr.addEventListener('click', function () { closeModal(); go('mis_equipos'); });
-    var cliSearch = modal.querySelector('#f_cliente_search');
-    var cliHidden = modal.querySelector('#f_cliente');
-    var cliResults = modal.querySelector('#f_cliente_results');
-    var cliHint = modal.querySelector('#f_cliente_hint');
-    if (cliSearch && cliHidden && cliResults) {
-      var cliTimer = null;
-      cliSearch.addEventListener('input', function () {
-        clearTimeout(cliTimer);
-        var q = cliSearch.value.trim();
-        if (q.length < 2) { cliResults.classList.add('hidden'); return; }
-        cliTimer = setTimeout(async function () {
-          try {
-            var data = await api('/api/clientes/disponibles/?search=' + encodeURIComponent(q));
-            var list = Array.isArray(data) ? data : (data.results || []);
-            if (!list.length) {
-              cliResults.innerHTML = '<div class="px-3 py-2 text-sm text-on-surface-variant">No se encontraron clientes</div>';
-              cliResults.classList.remove('hidden');
-              return;
-            }
-            cliResults.innerHTML = list.map(function (c) {
-              return '<div class="cli-suggest-item" data-id="' + c.id + '" data-name="' + esc(c.nombre_completo) + '" ' +
-                'style="padding:8px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:8px">' +
-                '<span class="material-symbols-outlined text-sm text-on-surface-variant">person</span>' +
-                '<span>' + esc(c.nombre_completo) + '</span>' +
-                '<span class="ml-auto text-xs text-on-surface-variant">' + esc(c.ciudad || '') + '</span>' +
-              '</div>';
-            }).join('');
-            cliResults.classList.remove('hidden');
-          } catch (e) { /* ignore */ }
-        }, 350);
-      });
-      cliResults.addEventListener('mousedown', function (e) {
-        var opt = e.target.closest('.cli-suggest-item');
-        if (!opt) return;
-        e.preventDefault();
-        cliHidden.value = opt.dataset.id;
-        cliSearch.value = opt.dataset.name;
-        cliResults.classList.add('hidden');
-        if (cliHint) cliHint.innerHTML = '<span class="text-success">Cliente seleccionado</span>';
-      });
-      cliSearch.addEventListener('blur', function () {
-        setTimeout(function () { cliResults.classList.add('hidden'); }, 200);
-      });
-    }
+    initRelacionPickers(modal);
+    if (isClient) initEquipoAgendaPicker(modal);
+    else if (!isTecnico) initClientePicker(modal, { required: true });
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var data = getFormData(e.target, ['equipo', 'tecnico', 'cliente']);
@@ -3250,16 +4217,18 @@
   async function openMantenimientoForm(item) {
     var isClient = S.user.role === 'cliente';
     var isTecnico = S.user.role === 'tecnico';
-    var clientes = [], equipos = [], tecnicos = [];
-    try { equipos = await fetchAll('/api/equipos/'); } catch (e) {}
-    function equipoLabel(e) {
-      return [e.tipo_nombre, e.marca, e.modelo, e.numero_serie].filter(Boolean).join(' · ');
+    var equipos = [];
+    if (isClient) {
+      try {
+        var equipoPage = await api('/api/equipos/?page=1');
+        equipos = Array.isArray(equipoPage) ? equipoPage : (equipoPage.results || []);
+      } catch (e) {}
     }
     var fields;
     if (isClient) {
       fields = [
-        { name: 'equipo', label: 'Equipo', type: 'select', required: true, value: item ? item.equipo : '',
-          options: optList(equipos, 'id', equipoLabel) },
+        { name: 'equipo', label: 'Equipo', type: 'equipo_agenda', required: true,
+          value: item ? item.equipo : '', displayValue: item ? (item.equipo_nombre || '') : '' },
         { name: 'tipo', label: 'Tipo de mantenimiento', type: 'select', value: item ? item.tipo : 'preventivo',
           options: [{ value: 'preventivo', label: 'Preventivo' }, { value: 'correctivo', label: 'Correctivo' }] },
         { name: 'fecha', label: 'Fecha deseada', type: 'date', required: true, value: item ? item.fecha : new Date().toISOString().slice(0, 10) },
@@ -3273,15 +4242,13 @@
         { name: 'observaciones', label: 'Observaciones', type: 'textarea', span: 2, value: item ? item.observaciones : '' },
       ];
     } else {
-      try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) {}
-      try { tecnicos = await fetchAll('/api/tecnicos/'); } catch (e) {}
       fields = [
-        { name: 'equipo', label: 'Equipo', type: 'select', required: true, value: item ? item.equipo : '',
-          options: optList(equipos, 'id', equipoLabel) },
-        { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
-          options: optList(clientes, 'id', 'nombre_completo') },
-        { name: 'tecnico', label: 'Técnico responsable', type: 'select', value: item ? item.tecnico : '',
-          options: optList(tecnicos, 'id', 'nombre') },
+        { name: 'equipo', label: 'Equipo', type: 'equipo_agenda', required: true,
+          value: item ? item.equipo : '', displayValue: item ? (item.equipo_nombre || '') : '' },
+        { name: 'cliente', label: 'Cliente', type: 'cliente', required: true,
+          value: item ? item.cliente : '', displayValue: item ? (item.cliente_nombre || '') : '' },
+        { name: 'tecnico', label: 'Técnico responsable', type: 'relacion', value: item ? item.tecnico : '',
+          displayValue: item ? (item.tecnico_nombre || '') : '' },
         { name: 'tipo', label: 'Tipo de mantenimiento', type: 'select', value: item ? item.tipo : 'preventivo',
           options: [{ value: 'preventivo', label: 'Preventivo' }, { value: 'correctivo', label: 'Correctivo' }] },
         { name: 'fecha', label: 'Fecha', type: 'date', required: true, value: item ? item.fecha : new Date().toISOString().slice(0, 10) },
@@ -3305,6 +4272,9 @@
     });
     var btnIr = modal.querySelector('[data-ir-mis-equipos]');
     if (btnIr) btnIr.addEventListener('click', function () { closeModal(); go('mis_equipos'); });
+    initRelacionPickers(modal);
+    if (isClient) initEquipoAgendaPicker(modal);
+    else if (!isTecnico) initClientePicker(modal, { required: true });
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var data = getFormData(e.target, ['tecnico', 'proxima_fecha']);
@@ -3962,19 +4932,13 @@
   }
 
   async function openVisitaForm(item) {
-    var clientes = [], ordenes = [], tecnicos = [];
-    try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) { clientes = []; }
-    try { ordenes = await fetchAll('/api/servicios/'); } catch (e) { ordenes = []; }
-    try { tecnicos = await fetchAll('/api/tecnicos/'); } catch (e) { tecnicos = []; }
     var fields = [
-      { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
-        options: optList(clientes, 'id', 'nombre_completo') },
-      { name: 'orden', label: 'Orden de servicio', type: 'select', value: item ? item.orden : '',
-        options: optList(ordenes, 'id', function (o) {
-          return o.numero + ' · ' + o.cliente_nombre + ' · ' + (o.tipo_servicio_display || '');
-        }) },
-      { name: 'tecnico', label: 'Técnico asignado', type: 'select', value: item ? item.tecnico : '',
-        options: optList(tecnicos, 'id', 'nombre') },
+      { name: 'cliente', label: 'Cliente', type: 'cliente', required: true, value: item ? item.cliente : '',
+        displayValue: item ? (item.cliente_nombre || '') : '' },
+      { name: 'orden', label: 'Orden de servicio', type: 'relacion', value: item ? item.orden : '',
+        displayValue: item && item.orden_numero ? item.orden_numero : '' },
+      { name: 'tecnico', label: 'Técnico asignado', type: 'relacion', value: item ? item.tecnico : '',
+        displayValue: item ? (item.tecnico_nombre || '') : '' },
       { name: 'fecha', label: 'Fecha', type: 'date', required: true, value: item ? item.fecha : new Date().toISOString().slice(0, 10) },
       { name: 'hora', label: 'Hora', type: 'time', value: item ? (item.hora || '').slice(0, 5) : '' },
       { name: 'estado', label: 'Estado', type: 'select', value: item ? item.estado : 'programada', options: VISITA_ESTADOS },
@@ -3988,6 +4952,8 @@
       width: '720px',
       footer: modalFooter('Cancelar', item ? 'Guardar cambios' : 'Registrar visita'),
     });
+    initClientePicker($('#modalForm'), { required: true });
+    initRelacionPickers($('#modalForm'));
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var data = getFormData(e.target, ['orden', 'tecnico', 'hora']);
@@ -4086,26 +5052,17 @@
   }
 
   async function openCotizacionForm(item) {
-    var clientes = [], solicitudes = [], tecnicos = [];
-    try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) { clientes = []; }
-    try { solicitudes = await fetchAll('/api/solicitudes/'); } catch (e) { solicitudes = []; }
-    try { tecnicos = await fetchAll('/api/tecnicos/'); } catch (e) { tecnicos = []; }
-
     var detalles = item && item.detalles ? item.detalles.map(function (d) {
       return { descripcion: d.descripcion, cantidad: String(d.cantidad), precio_unitario: String(d.precio_unitario) };
     }) : [];
 
     var fields = [
-      { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
-        options: optList(clientes, 'id', 'nombre_completo') },
-      { name: 'solicitud', label: 'Solicitud relacionada', type: 'select', value: item ? item.solicitud : '',
-        options: optList(solicitudes, 'id', function (s) {
-          var label = '#' + s.id + ' · ' + (s.tipo_solicitud_display || '');
-          if (s.tipo_equipo_solicitado) label += ' · ' + s.tipo_equipo_solicitado;
-          return label;
-        }) },
-      { name: 'tecnico', label: 'Técnico que cotiza', type: 'select', value: item ? item.tecnico : '',
-        options: optList(tecnicos, 'id', 'nombre') },
+      { name: 'cliente', label: 'Cliente', type: 'cliente', required: true, value: item ? item.cliente : '',
+        displayValue: item ? (item.cliente_nombre || '') : '' },
+      { name: 'solicitud', label: 'Solicitud relacionada', type: 'relacion', value: item ? item.solicitud : '',
+        displayValue: item && item.solicitud_numero ? '#' + item.solicitud_numero : '' },
+      { name: 'tecnico', label: 'Técnico que cotiza', type: 'relacion', value: item ? item.tecnico : '',
+        displayValue: item ? (item.tecnico_nombre || '') : '' },
       { name: 'validez_dias', label: 'Días de validez', type: 'number', min: 1, value: item ? item.validez_dias : '30' },
       { name: 'descuento', label: 'Descuento (DOP)', type: 'number', min: 0, step: 0.01, value: item ? String(item.descuento) : '0' },
       { name: 'notas', label: 'Notas', type: 'textarea', span: 2, value: item ? item.notas : '' },
@@ -4129,6 +5086,8 @@
       width: '860px',
       footer: modalFooter('Cancelar', item ? 'Guardar cambios' : 'Crear cotización'),
     });
+    initClientePicker(modal, { required: true });
+    initRelacionPickers(modal);
 
     var wrap = $('#detallesWrap');
     var subtotalEl = $('#detSubtotal');
@@ -4428,11 +5387,10 @@
 
   /* ---------- TÉCNICOS ---------- */
   function openTecnicoForm(t) {
-    var supervisorPromise = (isAdmin() || isSupervisor()) ? fetchAll('/api/supervisores/') : Promise.resolve([]);
-    supervisorPromise.then(function (supervisores) {
+    Promise.resolve().then(function () {
       var fields = [
-        { name: 'supervisor', label: 'Supervisor', type: 'select', value: t.supervisor || '',
-          options: [{ value: '', label: 'Sin supervisor' }].concat(optList(supervisores, 'id', 'nombre')) },
+        { name: 'supervisor', label: 'Supervisor', type: 'relacion', value: t.supervisor || '',
+          displayValue: t.supervisor_nombre || '', placeholder: 'Buscar supervisor...' },
         { name: 'especialidad', label: 'Especialidad', type: 'text', span: 2, value: t.especialidad },
         { name: 'telefono', label: 'Teléfono', type: 'tel', value: t.telefono },
         { name: 'direccion', label: 'Dirección', type: 'text', value: t.direccion },
@@ -4445,6 +5403,7 @@
       openModal('Editar perfil del técnico', formHTML(fields), {
         footer: modalFooter('Cancelar', 'Guardar cambios'),
       });
+      initRelacionPickers($('#modalForm'));
       $('#modalForm').addEventListener('submit', async function (e) {
         e.preventDefault();
         var btn = e.target.querySelector('[type=submit]');
@@ -4589,14 +5548,11 @@
 
   /* ---------- EQUIPOS ---------- */
   async function openEquiposForm(item) {
-    var clientes, tipos;
-    try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) { clientes = []; }
-    try { tipos = await fetchAll('/api/tipos-equipo/'); } catch (e) { tipos = []; }
     var fields = [
-      { name: 'cliente', label: 'Cliente propietario', type: 'select', required: true, value: item ? item.cliente : '',
-        options: optList(clientes, 'id', 'nombre_completo') },
-      { name: 'tipo', label: 'Tipo de equipo', type: 'select', required: true, value: item ? item.tipo : '',
-        options: optList(tipos, 'id', 'nombre') },
+      { name: 'cliente', label: 'Cliente propietario', type: 'cliente', required: true, value: item ? item.cliente : '',
+        displayValue: item ? (item.cliente_nombre || '') : '' },
+      { name: 'tipo', label: 'Tipo de equipo', type: 'relacion', required: true, value: item ? item.tipo : '',
+        displayValue: item ? (item.tipo_nombre || '') : '' },
       { name: 'marca', label: 'Marca', type: 'text', required: true, value: item ? item.marca : '' },
       { name: 'modelo', label: 'Modelo', type: 'text', required: true, value: item ? item.modelo : '' },
       { name: 'numero_serie', label: 'No. de serie', type: 'text', required: true, value: item ? item.numero_serie : '' },
@@ -4613,6 +5569,8 @@
     openModal(item ? 'Editar equipo' : 'Nuevo equipo', formHTML(fields), {
       footer: modalFooter('Cancelar', item ? 'Guardar cambios' : 'Crear equipo'),
     });
+    initClientePicker($('#modalForm'), { required: true });
+    initRelacionPickers($('#modalForm'));
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var data = getFormData(e.target, ['fecha_instalacion']);
@@ -4761,8 +5719,17 @@
 
   /* ---------- SOLICITUDES ---------- */
   async function openSolicitudForm(item) {
-    var clientes = [];
-    try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) { clientes = []; }
+    var productos = [];
+    var productosError = '';
+    // Almacén publica su inventario en /api/productos/. "disp=disponible"
+    // limita a productos visibles y con stock real (disponible=True, stock>0).
+    try { productos = await fetchAll('/api/productos/?disp=disponible'); }
+    catch (e) { productosError = apiErrorMessage(e); }
+
+    // Se conserva el texto histórico aunque ya no exista como producto actual.
+    var productoActual = item && item.tipo_equipo_solicitado
+      ? String(item.tipo_equipo_solicitado) : '';
+
     var tipoSolicitudOptions = [
       { value: 'instalacion', label: 'Instalación' },
       { value: 'reparacion', label: 'Reparación' },
@@ -4770,13 +5737,20 @@
       { value: 'otro', label: 'Otro' },
     ];
     var fields = [
-      { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
-        options: optList(clientes, 'id', 'nombre_completo') },
+      { name: 'cliente', label: 'Cliente', type: 'cliente', required: true,
+        value: item ? item.cliente : '',
+        displayValue: item ? (item.cliente_nombre || '') : '',
+        placeholder: 'Buscar cliente por nombre, apellidos o documento...' },
       { name: 'tipo_solicitud', label: 'Tipo de solicitud', type: 'select', required: true,
         value: item ? item.tipo_solicitud : 'otro', options: tipoSolicitudOptions },
-      { name: 'tipo_equipo_solicitado', label: 'Equipo solicitado (opcional)', type: 'text', required: false,
-        value: item ? item.tipo_equipo_solicitado : '',
-        placeholder: 'Ej: Nevera comercial 450 L, Split 12000 BTU…' },
+      { name: 'tipo_equipo_solicitado', label: 'Equipo solicitado (opcional)', type: 'producto', required: false,
+        value: productoActual,
+        placeholder: 'Buscar producto por nombre o categoría...',
+        hint: productosError
+          ? 'No se pudieron cargar los productos del Almacén. Puedes escribir el equipo o dejar el campo vacío.'
+          : productos.length
+            ? 'Selecciona un producto disponible en Almacén o deja el campo vacío.'
+            : 'No hay productos disponibles en Almacén; puedes dejar el campo vacío.' },
       { name: 'prioridad', label: 'Prioridad', type: 'select', value: item ? item.prioridad : 'media',
         options: [{ value: 'baja', label: 'Baja' }, { value: 'media', label: 'Media' },
                   { value: 'alta', label: 'Alta' }, { value: 'urgente', label: 'Urgente' }] },
@@ -4792,9 +5766,24 @@
     openModal(item ? 'Editar solicitud' : 'Nueva solicitud', formHTML(fields), {
       footer: modalFooter('Cancelar', item ? 'Guardar cambios' : 'Crear solicitud'),
     });
+    initProductoPicker($('#modalForm'), productos, productosError);
+    initClientePicker($('#modalForm'), { required: true });
+    initRelacionPickers($('#modalForm'));
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
+      var clienteHidden = e.target.querySelector('[data-cli-value]');
+      var clienteId = clienteHidden ? String(clienteHidden.value).trim() : '';
+      if (!/^\d+$/.test(clienteId)) {
+        toast('Selecciona un cliente de la lista.', 'error');
+        var clienteSearch = e.target.querySelector('[data-cli-search]');
+        if (clienteSearch) clienteSearch.focus();
+        return;
+      }
       var data = getFormData(e.target, ['fecha_deseada']);
+      // El buscador guarda la etiqueta descriptiva; el backend espera texto.
+      if (data.tipo_equipo_solicitado) {
+        data.tipo_equipo_solicitado = String(data.tipo_equipo_solicitado).trim().slice(0, 150);
+      }
       var btn = e.target.querySelector('[type=submit]');
       setBusy(btn, true);
       try {
@@ -4866,25 +5855,24 @@
 
   /* ---------- INSTALACIONES ---------- */
   async function openInstalacionForm(item) {
-    var clientes, equipos, tecnicos, solicitudes;
-    try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) { clientes = []; }
-    try { equipos = await fetchAll('/api/equipos/'); } catch (e) { equipos = []; }
-    try { tecnicos = await fetchAll('/api/tecnicos/'); } catch (e) { tecnicos = []; }
-    try { solicitudes = await fetchAll('/api/solicitudes/'); } catch (e) { solicitudes = []; }
-
+    if (item && S.user && S.user.role === 'tecnico') {
+      toast('Los técnicos no pueden editar los datos generales de una instalación.', 'error');
+      return;
+    }
     var fields = [
-      { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
-        options: optList(clientes, 'id', 'nombre_completo') },
-      { name: 'equipo', label: 'Equipo', type: 'select', value: item ? item.equipo : '',
-        options: optList(equipos, 'id', function (e) { return e.marca + ' ' + e.modelo + ' · ' + e.numero_serie; }) },
-      { name: 'tecnico', label: 'Técnico responsable', type: 'select', value: item ? item.tecnico : '',
-        options: optList(tecnicos, 'id', 'nombre') },
-      { name: 'solicitud', label: 'Solicitud relacionada', type: 'select', value: item ? item.solicitud : '',
-        options: optList(solicitudes, 'id', function (s) {
-          var label = '#' + s.id + ' · ' + (s.tipo_solicitud_display || '');
-          if (s.tipo_equipo_solicitado) label += ' · ' + s.tipo_equipo_solicitado;
-          return label;
-        }) },
+      { name: 'cliente', label: 'Cliente', type: 'cliente', required: true,
+        value: item ? item.cliente : '',
+        displayValue: item ? (item.cliente_nombre || '') : '',
+        placeholder: 'Buscar cliente por nombre, apellidos o documento...' },
+      { name: 'equipo', label: 'Equipo', type: 'equipo_agenda', value: item ? item.equipo : '',
+        displayValue: item && item.equipo_nombre
+          ? item.equipo_nombre
+          : (item && item.equipo ? 'Equipo #' + item.equipo : ''),
+        placeholder: 'Buscar equipo por marca, modelo o número de serie...' },
+      { name: 'tecnico', label: 'Técnico responsable', type: 'relacion', value: item ? item.tecnico : '',
+        displayValue: item ? (item.tecnico_nombre || '') : '' },
+      { name: 'solicitud', label: 'Solicitud relacionada', type: 'relacion', value: item ? item.solicitud : '',
+        displayValue: item && item.solicitud_numero ? '#' + item.solicitud_numero : '' },
       { name: 'fecha_programada', label: 'Fecha programada', type: 'datetime-local', value: item ? dtLocal(item.fecha_programada) : '',
         hint: 'Selecciona la fecha y hora desde el calendario.' },
       { name: 'fecha_instalacion', label: 'Fecha de instalación', type: 'datetime-local', value: item ? dtLocal(item.fecha_instalacion) : '',
@@ -4917,6 +5905,10 @@
         footer: modalFooter('Cancelar', item ? 'Guardar cambios' : 'Crear instalación'),
         width: '720px',
       });
+
+    initClientePicker($('#modalForm'), { required: true });
+    initEquipoAgendaPicker($('#modalForm'));
+    initRelacionPickers($('#modalForm'));
 
     $('#btnGeocode').addEventListener('click', function () {
       var dir = $('#modalForm [name=direccion]').value.trim();
@@ -4965,6 +5957,23 @@
 
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
+      var clienteHidden = e.target.querySelector('[data-cli-value]');
+      var clienteId = clienteHidden ? String(clienteHidden.value).trim() : '';
+      if (!/^\d+$/.test(clienteId)) {
+        toast('Selecciona un cliente de la lista.', 'error');
+        var clienteSearch = e.target.querySelector('[data-cli-search]');
+        if (clienteSearch) clienteSearch.focus();
+        return;
+      }
+      var equipoHidden = e.target.querySelector('[data-eqa-value]');
+      var equipoId = equipoHidden ? String(equipoHidden.value).trim() : '';
+      var equipoSearch = e.target.querySelector('[data-eqa-search]');
+      if ((equipoId && !/^\d+$/.test(equipoId)) ||
+          (!equipoId && equipoSearch && equipoSearch.value.trim())) {
+        toast('Selecciona un equipo de la lista o limpia el campo.', 'error');
+        if (equipoSearch) equipoSearch.focus();
+        return;
+      }
       var data = getFormData(e.target, ['equipo', 'tecnico', 'solicitud', 'fecha_programada', 'fecha_instalacion', 'latitud', 'longitud']);
       var btn = e.target.querySelector('[type=submit]');
       setBusy(btn, true);
@@ -4984,7 +5993,13 @@
     if (action === 'agenda') { go('agenda'); return; }
     if (action === 'ver') return openInstalacionDetalle(id);
     if (action === 'reprogramar') return getItem('/api/instalaciones/' + id + '/').then(reprogramarInstalacion);
-    if (action === 'editar') return getItem('/api/instalaciones/' + id + '/').then(openInstalacionForm);
+    if (action === 'editar') {
+      if (S.user && S.user.role === 'tecnico') {
+        toast('Los técnicos no pueden editar los datos generales de una instalación.', 'error');
+        return;
+      }
+      return getItem('/api/instalaciones/' + id + '/').then(openInstalacionForm);
+    }
     if (action === 'estado') return getItem('/api/instalaciones/' + id + '/').then(function (i) {
       openEstadoModal('instalaciones', i, ESTADOS_INSTALACION);
     });
@@ -4998,17 +6013,13 @@
 
   /* ---------- PAGOS / FACTURAS ---------- */
   async function openPagoForm(item) {
-    var clientes = [], ordenes = [], instalaciones = [];
-    try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) {}
-    try { ordenes = await fetchAll('/api/servicios/'); } catch (e) {}
-    try { instalaciones = await fetchAll('/api/instalaciones/'); } catch (e) {}
     var fields = [
-      { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: item ? item.cliente : '',
-        options: optList(clientes, 'id', 'nombre_completo') },
-      { name: 'orden', label: 'Orden de servicio', type: 'select', value: item ? item.orden : '',
-        options: optList(ordenes, 'id', function (o) { return '#' + o.numero + ' · ' + (o.cliente_nombre || ''); }) },
-      { name: 'instalacion', label: 'Instalación', type: 'select', value: item ? item.instalacion : '',
-        options: optList(instalaciones, 'id', function (i) { return '#' + i.id + ' · ' + (i.cliente_nombre || ''); }) },
+      { name: 'cliente', label: 'Cliente', type: 'cliente', required: true, value: item ? item.cliente : '',
+        displayValue: item ? (item.cliente_nombre || '') : '' },
+      { name: 'orden', label: 'Orden de servicio', type: 'relacion', value: item ? item.orden : '',
+        displayValue: item && item.orden_numero ? item.orden_numero : '' },
+      { name: 'instalacion', label: 'Instalación', type: 'relacion', value: item ? item.instalacion : '',
+        displayValue: item && item.instalacion ? 'Instalación #' + item.instalacion : '' },
       { name: 'monto', label: 'Monto', type: 'number', required: true, min: 0.01, step: 0.01,
         value: item ? item.monto : '' },
       { name: 'es_abono', label: 'Es un abono parcial', type: 'checkbox', value: item ? !!item.es_abono : false },
@@ -5024,6 +6035,8 @@
     openModal(item ? 'Editar pago' : 'Nuevo pago', formHTML(fields), {
       footer: modalFooter('Cancelar', item ? 'Guardar cambios' : 'Registrar pago'),
     });
+    initClientePicker($('#modalForm'), { required: true });
+    initRelacionPickers($('#modalForm'));
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var data = getFormData(e.target, ['orden', 'instalacion']);
@@ -5041,20 +6054,17 @@
   }
 
   async function openFacturaForm() {
-    var clientes = [], ordenes = [];
-    try { clientes = await fetchAll('/api/clientes/disponibles/'); } catch (e) {}
-    try { ordenes = await fetchAll('/api/servicios/'); } catch (e) {}
     var fields = [
-      { name: 'cliente', label: 'Cliente', type: 'select', required: true, value: '',
-        options: optList(clientes, 'id', 'nombre_completo') },
-      { name: 'orden', label: 'Orden de servicio', type: 'select', value: '',
-        options: optList(ordenes, 'id', function (o) { return '#' + o.numero + ' · ' + (o.cliente_nombre || ''); }) },
+      { name: 'cliente', label: 'Cliente', type: 'cliente', required: true, value: '' },
+      { name: 'orden', label: 'Orden de servicio', type: 'relacion', value: '' },
       { name: 'iva', label: 'IVA', type: 'number', min: 0, step: 0.01, value: '0' },
       { name: 'notas', label: 'Notas', type: 'textarea', span: 2, value: '' },
     ];
     openModal('Nueva factura', formHTML(fields), {
       footer: modalFooter('Cancelar', 'Crear factura'),
     });
+    initClientePicker($('#modalForm'), { required: true });
+    initRelacionPickers($('#modalForm'));
     $('#modalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
       var data = getFormData(e.target, ['orden']);
